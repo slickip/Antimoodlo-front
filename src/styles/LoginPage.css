@@ -1,0 +1,117 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+  background: #000c2a;
+  height: 100vh;
+  width: 100vw;
+  overflow-x: hidden;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100vw;
+}
+
+/* ----- TOP BAR ----- */
+.top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 6vh;
+  background: #32c000;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 5vw;
+  box-sizing: border-box;
+  z-index: 1000;
+}
+
+.top-bar .logo-text {
+  font-weight: bold;
+  font-family: monospace;
+  text-transform: uppercase;
+  line-height: 1.2;
+  color: black;
+  font-size: 2.2vw;
+}
+
+.top-bar .email {
+  font-size: 1.6vw;
+  white-space: nowrap;
+}
+
+.top-bar .email a {
+  color: white;
+  text-decoration: underline;
+  font-size: 1.6vw;
+}
+
+/* ----- LOGIN CARD ----- */
+.card {
+  background: white;
+  padding: 5vw;
+  margin-top: 12vh; /* отступ после фиксированной шапки */
+  text-align: center;
+  width: 40vw;
+  border-radius: 1vw;
+  box-sizing: border-box;
+}
+
+/* ----- LOGO SECTION ----- */
+.logo-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4vw;
+  margin-bottom: 4vh;
+}
+
+.logo {
+  width: 20vw;    /* фиксированная ширина */
+  height: 10vh;    /* фиксированная высота */
+  object-fit: contain; /* сохраняет пропорции, не обрезая */
+}
+
+h1 {
+  font-size: 2.5vw;
+  text-align: left;
+  color: #000;
+}
+
+/* ----- FORM ----- */
+.form input {
+  width: 100%;
+  padding: 1.5vh 1vw;
+  margin: 1.5vh 0;
+  border: none;
+  box-shadow: 0 0.3vh 0.6vh rgba(0,0,0,0.2);
+  font-size: 1.5vw;
+  border-radius: 0.5vw;
+  box-sizing: border-box;
+}
+
+button {
+  background: #32c000;
+  color: white;
+  border: none;
+  padding: 2vh 4vw;
+  cursor: pointer;
+  font-weight: bold;
+  box-shadow: 0 0.3vh 0.6vh rgba(0,0,0,0.3);
+  border-radius: 1vw;
+  margin-top: 2vh;
+  font-size: 1.8vw;
+}
+
+/* ----- FOOTER ----- */
+footer {
+  font-size: 1.2vw;
+  margin-top: 4vh;
+  font-weight: bold;
+  color: #000;
+}
