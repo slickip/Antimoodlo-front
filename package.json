@@ -2,6 +2,7 @@
   "name": "moodle",
   "version": "0.1.0",
   "private": true,
+  "proxy": "http://37.220.83.144:8080",
   "dependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
