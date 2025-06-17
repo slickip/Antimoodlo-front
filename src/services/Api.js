@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://37.220.83.144:8080/swagger/index.html#/';
+const API_BASE_URL = 'http://37.220.83.144:8080/';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
