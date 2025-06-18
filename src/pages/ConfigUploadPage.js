@@ -3,6 +3,7 @@ import yaml from "js-yaml";
 import { FiLogOut, FiUpload, FiEye, FiX, FiCheck, FiPlus, FiTrash2, FiSave } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/Api";
+import Timer from "../components/Timer";
 
 // Компонент для подсветки YAML
 const YamlExample = () => {
@@ -207,6 +208,7 @@ function QuizModal({ visible, onClose, quizConfig }) {
 function Quiz({ quizConfig }) {
   const [answers, setAnswers] = useState({});
   const [result, setResult] = useState(null);
+  const [isTimeUp, setIsTimeUp] = useState(false);
 
   const handleChange = (questionId, optionIndex, isMultiple) => {
     setAnswers((prev) => {
@@ -244,10 +246,28 @@ function Quiz({ quizConfig }) {
     setResult(`Правильных ответов: ${correct} из ${questions.length}`);
   };
 
+  useEffect(() => {
+    // Как только isTimeUp становится true — вызываем проверку
+    if (isTimeUp) {
+      checkAnswers();
+    }
+  }, [isTimeUp]);
+
   return (
     <div>
       <h2 style={{ color: "#010528" }}>{quizConfig.quiz.title}</h2>
       <p>{quizConfig.quiz.description}</p>
+      {/* Таймер */}
+      {quizConfig.quiz.duration && !result && (
+        <Timer
+          duration={quizConfig.quiz.duration}
+          onTimeUp={() => {
+            setIsTimeUp(true);
+            setResult("⏰ Время вышло! Квиз завершён.");
+          }}
+        />
+      )}
+
       {quizConfig.quiz.questions.map((q) => (
         <div key={q.id} style={{ marginBottom: 20 }}>
           <strong style={{ color: "#010528" }}>{q.id}. {q.question}</strong>
@@ -275,6 +295,7 @@ function Quiz({ quizConfig }) {
                   checked={checked}
                   onChange={() => handleChange(q.id, i, isMultiple)}
                   style={{ display: "none" }}
+                  disabled={isTimeUp}
                 />
                 <CustomCheckbox checked={checked} isRadio={!isMultiple} />
                 <span style={{ marginLeft: 8, color: "#010528" }}>{opt}</span>
@@ -283,24 +304,26 @@ function Quiz({ quizConfig }) {
           })}
         </div>
       ))}
-      <button
-        onClick={checkAnswers}
-        style={{
-          padding: "10px 20px",
-          marginTop: 10,
-          backgroundColor: "#010528",
-          color: "#fff",
-          border: "none",
-          borderRadius: "6px",
-          cursor: "pointer",
-          fontWeight: "bold",
-          transition: "background-color 0.3s ease",
-        }}
-        onMouseEnter={e => e.currentTarget.style.backgroundColor = "#0921E6"}
-        onMouseLeave={e => e.currentTarget.style.backgroundColor = "#010528"}
-      >
-        Проверить ответы
-      </button>
+      {!isTimeUp && !result && (
+  <button
+    onClick={checkAnswers}
+    style={{
+      padding: "10px 20px",
+      marginTop: 10,
+      backgroundColor: "#010528",
+      color: "#fff",
+      border: "none",
+      borderRadius: "6px",
+      cursor: "pointer",
+      fontWeight: "bold",
+      transition: "background-color 0.3s ease",
+    }}
+    onMouseEnter={e => e.currentTarget.style.backgroundColor = "#0921E6"}
+    onMouseLeave={e => e.currentTarget.style.backgroundColor = "#010528"}
+  >
+    Проверить ответы
+  </button>
+  )}
       {result && (
         <p style={{ fontWeight: "bold", marginTop: 10, color: "#010528" }}>
           {result}
@@ -347,6 +370,7 @@ function CustomCheckbox({ checked, isRadio }) {
 }
 
 function ConfigUploadPage() {
+  const [quizDurationInput, setQuizDurationInput] = useState(60); // 60 секунд по-умолчанию
   const [quizConfig, setQuizConfig] = useState(null);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -590,6 +614,7 @@ function ConfigUploadPage() {
       quiz: {
         title: quizTitle,
         description: quizDescription,
+        duration: quizDurationInput,
         questions: questions
       }
     });
@@ -639,6 +664,24 @@ function ConfigUploadPage() {
         />
       </div>
 
+ {/* --- Duration --- */}
+     <div style={{ marginBottom: "25px", display: "flex", alignItems: "center" }}>
+       <label style={{ width: "120px", fontWeight: 500 }}>Duration (сек):</label>
+       <input
+         type="number"
+         min="1"
+         value={quizDurationInput}
+         onChange={e => setQuizDurationInput(Number(e.target.value))}
+         style={{
+           width: "100px",
+           padding: "8px",
+           borderRadius: "6px",
+           border: "1px solid #ddd",
+           fontSize: "16px"
+         }}
+       />
+
++     </div>
       <div style={{ 
         backgroundColor: "#f8f9fa",
         padding: "20px",
