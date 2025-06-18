@@ -5,6 +5,25 @@ import { useAuth } from "../context/AuthContext";
 import api from "../services/Api";
 import Timer from "../components/Timer";
 
+
+function parseMoscow(iso) {
+   if (iso instanceof Date || typeof iso === "number") {
+    return new Date(iso);
+  }
+  // если iso не строка — приводим к строке (например undefined → "undefined")
+  if (typeof iso !== "string") {
+    iso = String(iso);
+  }
+
+  if (/[+\-]\d{2}:\d{2}$|Z$/.test(iso)) {
+    return new Date(iso);
+  }
+  const [date, time] = iso.split("T");
+  const [Y, M, D] = date.split("-").map(Number);
+  const [h, m, s = 0] = time.split(":").map(Number);
+  return new Date(Date.UTC(Y, M - 1, D, h - 3, m, s));
+}
+
 // Компонент для подсветки YAML
 const YamlExample = () => {
   return (
@@ -206,168 +225,141 @@ function QuizModal({ visible, onClose, quizConfig }) {
 }
 
 function Quiz({ quizConfig }) {
-  const [answers, setAnswers] = useState({});
-  const [result, setResult] = useState(null);
-  const [isTimeUp, setIsTimeUp] = useState(false);
+  const [answers, setAnswers]     = useState({});
+  const [result, setResult]       = useState(null);
+  const [isTimeUp, setIsTimeUp]   = useState(false);
 
-  const handleChange = (questionId, optionIndex, isMultiple) => {
-    setAnswers((prev) => {
-      const current = prev[questionId] || (isMultiple ? [] : null);
+  const { start, end, title, description, questions, duration } = quizConfig.quiz;
+  const startDate = parseMoscow(start);
+  const endDate   = parseMoscow(end);
 
-      if (isMultiple) {
-        if (current.includes(optionIndex)) {
-          return { ...prev, [questionId]: current.filter((i) => i !== optionIndex) };
-        } else {
-          return { ...prev, [questionId]: [...current, optionIndex] };
-        }
+  const nowMoscow = getNowMoscow();
+  const expired   = nowMoscow > endDate || isTimeUp;
+
+  
+  // Общая функция подсчёта результата
+  const computeResult = () => {
+    let correctCount = 0;
+    questions.forEach(q => {
+      const given = answers[q.id];
+      if (q.type === "single") {
+        if (given === q.correct_option_index) correctCount++;
       } else {
-        return { ...prev, [questionId]: optionIndex };
+        const a = (given || []).slice().sort().toString();
+        const b = q.correct_option_indexes.slice().sort().toString();
+        if (a === b) correctCount++;
       }
     });
+    setResult(`✅ Правильных: ${correctCount} из ${questions.length}`);
   };
 
-  const checkAnswers = () => {
-    const questions = quizConfig.quiz.questions;
-    let correct = 0;
-
-    questions.forEach((q) => {
-      const a = answers[q.id];
-      if (q.type === "single" && a === q.correct_option_index) correct++;
-      if (
-        q.type === "multiple" &&
-        Array.isArray(a) &&
-        a.length === q.correct_option_indexes.length &&
-        a.every((val) => q.correct_option_indexes.includes(val))
-      ) {
-        correct++;
+  // автоматическая «обрезка» по реальному времени окончания
+  useEffect(() => {
+    if (result) return;
+    const id = setInterval(() => {
+      if (getNowMoscow() > endDate) {
+        setIsTimeUp(true);
+        computeResult();
+        clearInterval(id);
       }
-    });
-
-    setResult(`Правильных ответов: ${correct} из ${questions.length}`);
-  };
+    }, 500);
+    return () => clearInterval(id);
+  }, [endDate, questions, answers, result]);
 
   useEffect(() => {
-    // Как только isTimeUp становится true — вызываем проверку
-    if (isTimeUp) {
-      checkAnswers();
+    if (isTimeUp && !result) {
+      computeResult();
     }
-  }, [isTimeUp]);
+  }, [isTimeUp, result]);
 
-  return (
+  function getNowMoscow() {
+  const nowLocal = new Date();
+  const offsetLocalMin = nowLocal.getTimezoneOffset();     // в минутах (напр. –120 для CEST)
+  const offsetMoscowMin = 3 * 60;                          // Москва = UTC+3
+  // смещение до MSK = (offsetMoscow – (–offsetLocal)) 
+  //                  = offsetMoscow + offsetLocal
+  const deltaMs = (offsetMoscowMin + offsetLocalMin) * 60_000;
+  return new Date(nowLocal.getTime() + deltaMs);
+}
+
+  if (nowMoscow < startDate) {
+  return <>… Доступно с: { startDate.toLocaleString("ru-RU", { timeZone: "Europe/Moscow" }) } </>
+  }
+  
+
+  // 3) хелпер для обработки кликов
+  const handleChange = (questionId, optionIndex, isMultiple) => {
+    if (isTimeUp || result) return;
+    setAnswers(prev => {
+      const current = prev[questionId] || (isMultiple ? [] : null);
+      if (isMultiple) {
+        return {
+          ...prev,
+          [questionId]: current.includes(optionIndex)
+            ? current.filter(x => x !== optionIndex)
+            : [...current, optionIndex],
+        };
+      }
+      return { ...prev, [questionId]: optionIndex };
+    });
+  };
+
+return (
     <div>
-      <h2 style={{ color: "#010528" }}>{quizConfig.quiz.title}</h2>
-      <p>{quizConfig.quiz.description}</p>
-      {/* Таймер */}
-      {quizConfig.quiz.duration && !result && (
-        <Timer
-          duration={quizConfig.quiz.duration}
-          onTimeUp={() => {
-            setIsTimeUp(true);
-            setResult("⏰ Время вышло! Квиз завершён.");
-          }}
-        />
-      )}
+      <h2>{title}</h2>
+      <p>{description}</p>
 
-      {quizConfig.quiz.questions.map((q) => (
-        <div key={q.id} style={{ marginBottom: 20 }}>
-          <strong style={{ color: "#010528" }}>{q.id}. {q.question}</strong>
-          {q.options.map((opt, i) => {
+      {/* таймер только если ещё нет результата */}
+      {!result && <Timer duration={duration} onTimeUp={() => setIsTimeUp(true)} />}
+
+      {expired && result ? (
+        // 5a) время вышло и результат уже вычислен
+        <p style={{ fontWeight: "bold", marginTop: 12 }}>{result}</p>
+      ) : (
+        // 5b) показываем вопросы + кнопку
+        <>
+          {questions.map(q => {
             const isMultiple = q.type === "multiple";
-            const checked = isMultiple
-              ? (answers[q.id] || []).includes(i)
-              : answers[q.id] === i;
-
             return (
-              <label
-                key={i}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  marginLeft: 10,
-                  cursor: "pointer",
-                  userSelect: "none",
-                  marginTop: 6,
-                }}
-              >
-                <input
-                  type={isMultiple ? "checkbox" : "radio"}
-                  name={`q-${q.id}`}
-                  checked={checked}
-                  onChange={() => handleChange(q.id, i, isMultiple)}
-                  style={{ display: "none" }}
-                  disabled={isTimeUp}
-                />
-                <CustomCheckbox checked={checked} isRadio={!isMultiple} />
-                <span style={{ marginLeft: 8, color: "#010528" }}>{opt}</span>
-              </label>
+              <div key={q.id} style={{ marginBottom: 16 }}>
+                <strong>{q.id}. {q.question}</strong>
+                {q.options.map((opt, i) => {
+                  const checked = isMultiple
+                    ? (answers[q.id] || []).includes(i)
+                    : answers[q.id] === i;
+                  return (
+                    <label
+                      key={i}
+                      style={{ display: "flex", alignItems: "center", marginTop: 4 }}
+                    >
+                      <input
+                        type={isMultiple ? "checkbox" : "radio"}
+                        checked={checked}
+                        disabled={expired}
+                        onChange={() => handleChange(q.id, i, isMultiple)}
+                        style={{ marginRight: 8 }}
+                      />
+                      <span>{opt}</span>
+                    </label>
+                  );
+                })}
+              </div>
             );
           })}
-        </div>
-      ))}
-      {!isTimeUp && !result && (
-  <button
-    onClick={checkAnswers}
-    style={{
-      padding: "10px 20px",
-      marginTop: 10,
-      backgroundColor: "#010528",
-      color: "#fff",
-      border: "none",
-      borderRadius: "6px",
-      cursor: "pointer",
-      fontWeight: "bold",
-      transition: "background-color 0.3s ease",
-    }}
-    onMouseEnter={e => e.currentTarget.style.backgroundColor = "#0921E6"}
-    onMouseLeave={e => e.currentTarget.style.backgroundColor = "#010528"}
-  >
-    Проверить ответы
-  </button>
-  )}
-      {result && (
-        <p style={{ fontWeight: "bold", marginTop: 10, color: "#010528" }}>
-          {result}
-        </p>
+
+          <button
+            onClick={() => setIsTimeUp(true)}
+            disabled={expired}
+            style={{ marginTop: 12 }}
+          >
+            Проверить ответы
+          </button>
+        </>
       )}
     </div>
   );
 }
 
-function CustomCheckbox({ checked, isRadio }) {
-  return (
-    <span
-      style={{
-        width: 20,
-        height: 20,
-        borderRadius: isRadio ? "50%" : "4px",
-        border: "2px solid #010528",
-        backgroundColor: checked ? "#010528" : "transparent",
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        transition: "background-color 0.3s ease, border-color 0.3s ease",
-        boxSizing: "border-box",
-        position: "relative",
-      }}
-    >
-      {checked && (
-        isRadio ? (
-          <span
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: "50%",
-              backgroundColor: "#fff",
-              display: "block",
-            }}
-          />
-        ) : (
-          <FiCheck color="#fff" size={16} />
-        )
-      )}
-    </span>
-  );
-}
 
 function ConfigUploadPage() {
   const [quizDurationInput, setQuizDurationInput] = useState(60); // 60 секунд по-умолчанию
@@ -590,13 +582,16 @@ function ConfigUploadPage() {
   const generateYAML = () => {
     const quiz = {
       quiz: {
-        title: quizTitle,
-        description: quizDescription,
-        questions: questions
+      title: quizTitle,
+      description: quizDescription,
+      start: quizConfig.quiz.start,
+      end:   quizConfig.quiz.end,
+      duration:    quizDurationInput,
+      questions
       }
     };
     
-    const yamlStr = yaml.dump(quiz);
+    const yamlStr = yaml.dump(quiz, { schema: yaml.JSON_SCHEMA });
     const blob = new Blob([yamlStr], { type: "text/yaml" });
     const url = URL.createObjectURL(blob);
     
@@ -610,12 +605,17 @@ function ConfigUploadPage() {
   };
 
   const previewQuiz = () => {
+    const nowIso   = new Date().toISOString();
+    const endIso   = new Date(Date.now() + quizDurationInput * 1000).toISOString();
+
     setQuizConfig({
       quiz: {
         title: quizTitle,
         description: quizDescription,
         duration: quizDurationInput,
-        questions: questions
+        questions: questions,
+        start: nowIso,
+        end:   endIso,
       }
     });
     setShowModal(true);
