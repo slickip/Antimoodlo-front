@@ -769,8 +769,29 @@ function ConfigUploadPage() {
         <textarea
           value={yamlText}
           onChange={(e) => setYamlText(e.target.value)}
-          className="yaml-textarea"
-          placeholder="Enter your YAML configuration here..."
+          className="yaml-textarea" //штука чтоб высвечивалась в конструкторе yaml файла
+          placeholder="QUIZ EXAMPLE:
+quiz:
+  title: Example quiz
+  questions:
+    - id: 1
+      question: How are you
+      type: single
+      options:
+        - Fine
+        - Bad
+      correct_option_index: 0
+    - id: 2
+      question: Why?
+      type: multiple
+      options:
+        - Because of beautiful day
+        - Everything is bad in my life
+        - Woke up with this mood
+      correct_option_indexes:
+        - 0
+        - 2
+"
           rows={20}
         />
         
