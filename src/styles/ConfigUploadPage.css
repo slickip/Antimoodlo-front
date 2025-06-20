@@ -259,21 +259,24 @@
   }
   
   .add-option-btn {
-    padding: 8px 15px;
-    background-color: #f0f0f0;
+    padding: 12px 24px;
+    background-color: #292E52;
+    color: #fff;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 15px;
-    margin-top: 10px;
+    font-size: 16px;
+    font-weight: 500;
+    transition: opacity 0.3s, background-color 0.3s;
+  }
+
+  .add-option-btn:hover {
+    background-color: #0921E6;
   }
   
   .add-question-btn {
     padding: 12px 24px;
-    background-color: #010528;
+    background-color: #292E52;
     color: #fff;
     border: none;
     border-radius: 8px;
