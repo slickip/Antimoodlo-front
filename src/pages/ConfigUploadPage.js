@@ -352,16 +352,30 @@ function ConfigUploadPage() {
   };
 
   const exportYaml = () => {
-    const blob = new Blob([yamlText], { type: "text/yaml" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `quiz_config_${Date.now()}.yaml`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  let filename = "quiz_config";
+
+  try {
+    const parsed = yaml.load(yamlText);
+    if (parsed && parsed.quiz && parsed.quiz.title) {
+      filename = parsed.quiz.title
+        .replace(/\s+/g, "_")         // пробелы → _
+        .replace(/[^\w\-]/g, "");     // убрать всё кроме букв, цифр, _
+    }
+  } catch (e) {
+    console.warn("Could not parse YAML for filename:", e.message);
+  }
+
+  const blob = new Blob([yamlText], { type: "text/yaml" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${filename}.yaml`;  // ← динамическое имя
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
 
   const openPreviewFromYaml = () => {
     try {
@@ -797,7 +811,7 @@ function ConfigUploadPage() {
           className="yaml-textarea" //штука чтоб высвечивалась в конструкторе yaml файла
           placeholder="QUIZ EXAMPLE:
 quiz:
-  title: Example quiz
+  title: Example quiz (Please write the title in English)
   questions:
     - id: 1
       question: How are you
