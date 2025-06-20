@@ -5,6 +5,8 @@ import { useAuth } from "../context/AuthContext";
 import api from "../services/Api";
 import Timer from "../components/Timer";
 import "../styles/ConfigUploadPage.css";
+// import MatchingQuestion from "./MatchingQuestion";
+
 
 function parseMoscow(iso) {
   // Преобразует строку в Date с учетом московского времени
@@ -113,7 +115,14 @@ function Quiz({ quizConfig }) {
       const given = answers[q.id];
       if (q.type === "single") {
         if (given === q.correct_option_index) correctCount++;
-      } else {
+  //     } else if (q.type === "matching") {
+  //       const given = answers[q.id] || {};
+  //       const correct = q.correct_matches;
+  //       const allMatched = Object.keys(correct).every(k => given[k] === correct[k]);
+  //       if (allMatched) 
+  //         correctCount++;
+  }
+  else {
         const a = (given || []).slice().sort().toString();
         const b = q.correct_option_indexes.slice().sort().toString();
         if (a === b) correctCount++;
@@ -188,33 +197,48 @@ return (
         // 5b) показываем вопросы + кнопку
         <>
           {questions.map(q => {
-            const isMultiple = q.type === "multiple";
-            return (
-              <div key={q.id} style={{ marginBottom: 16 }}>
-                <strong>{q.id}. {q.question}</strong>
-                {q.options.map((opt, i) => {
-                  const checked = isMultiple
-                    ? (answers[q.id] || []).includes(i)
-                    : answers[q.id] === i;
-                  return (
-                    <label
-                      key={i}
-                      style={{ display: "flex", alignItems: "center", marginTop: 4 }}
-                    >
-                      <input
-                        type={isMultiple ? "checkbox" : "radio"}
-                        checked={checked}
-                        disabled={expired}
-                        onChange={() => handleChange(q.id, i, isMultiple)}
-                        style={{ marginRight: 8 }}
-                      />
-                      <span>{opt}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            );
-          })}
+  // if (q.type === "matching") {
+  //   return (
+  //     <div key={q.id} style={{ marginBottom: 24 }}>
+  //       <strong>{q.id}. {q.question}</strong>
+  //       <MatchingQuestion
+  //         question={q}
+  //         answer={answers}
+  //         setAnswer={setAnswers}
+  //         disabled={expired}
+  //       />
+  //     </div>
+  //   );
+  // }
+
+  const isMultiple = q.type === "multiple";
+  return (
+    <div key={q.id} style={{ marginBottom: 16 }}>
+      <strong>{q.id}. {q.question}</strong>
+      {q.options.map((opt, i) => {
+        const checked = isMultiple
+          ? (answers[q.id] || []).includes(i)
+          : answers[q.id] === i;
+        return (
+          <label
+            key={i}
+            style={{ display: "flex", alignItems: "center", marginTop: 4 }}
+          >
+            <input
+              type={isMultiple ? "checkbox" : "radio"}
+              checked={checked}
+              disabled={expired}
+              onChange={() => handleChange(q.id, i, isMultiple)}
+              style={{ marginRight: 8 }}
+            />
+            <span>{opt}</span>
+          </label>
+        );
+      })}
+    </div>
+  );
+})}
+
 
           <button
             onClick={() => setIsTimeUp(true)}
@@ -376,7 +400,8 @@ function ConfigUploadPage() {
     const quizData = {
       quizTitle,
       quizDescription,
-      questions
+      questions,
+      duration: quizDurationInput
     };
 
     try {
