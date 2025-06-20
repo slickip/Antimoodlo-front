@@ -270,6 +270,8 @@ function CustomCheckbox({ checked, isRadio }) {
 }
 
 function ConfigUploadPage() {
+  const [quizStart, setQuizStart] = useState("");
+  const [quizEnd, setQuizEnd] = useState("");
   const [quizDurationInput, setQuizDurationInput] = useState(60);
   const [quizConfig, setQuizConfig] = useState(null);
   const [error, setError] = useState(null);
@@ -402,7 +404,19 @@ function ConfigUploadPage() {
       if (parsed.quiz.duration) {
         setQuizDurationInput(parsed.quiz.duration);
       }
-      
+
+      if (parsed.quiz.start) {
+        const date = new Date(parsed.quiz.start);
+        const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+        setQuizStart(offsetDate.toISOString().slice(0, 16));
+      }
+
+      if (parsed.quiz.end) {
+        const date = new Date(parsed.quiz.end);
+        const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+        setQuizEnd(offsetDate.toISOString().slice(0, 16));
+      }
+
       setActiveTab('create');
       setYamlError(null);
     } catch (e) {
@@ -414,9 +428,16 @@ function ConfigUploadPage() {
     const quizData = {
       quizTitle,
       quizDescription,
+      duration: quizDurationInput,
+      start: quizStart,
+      end: quizEnd,
       questions,
-      duration: quizDurationInput
     };
+
+    if (quizStart && quizEnd && new Date(quizStart) >= new Date(quizEnd)) {
+      alert("Дата окончания должна быть позже даты начала");
+      return;
+    }
 
     try {
       setIsLoading(true);
@@ -448,6 +469,8 @@ function ConfigUploadPage() {
       const serverQuiz = response.data;
       setQuizTitle(serverQuiz.title || "");
       setQuizDescription(serverQuiz.description || "");
+      setQuizStart(serverQuiz.start || "");
+      setQuizEnd(serverQuiz.end || "");
       setQuestions(serverQuiz.questions || []);
       setActiveTab('create');
     } catch (error) {
@@ -544,6 +567,9 @@ function ConfigUploadPage() {
       quiz: {
         title: quizTitle,
         description: quizDescription,
+        duration: quizDurationInput,
+        start: quizStart,
+        end: quizEnd,
         questions: questions
       }
     };
@@ -567,9 +593,16 @@ function ConfigUploadPage() {
         title: quizTitle,
         description: quizDescription,
         duration: quizDurationInput,
+        start: quizStart,
+        end: quizEnd,
         questions: questions
       }
     });
+    if (quizStart && quizEnd && new Date(quizStart) >= new Date(quizEnd)) {
+      alert("Дата окончания должна быть позже даты начала");
+      return;
+    }
+
     setShowModal(true);
   };
 
@@ -606,6 +639,26 @@ function ConfigUploadPage() {
           value={quizDurationInput}
           onChange={e => setQuizDurationInput(Number(e.target.value))}
           className="duration-input"
+        />
+      </div>
+
+      <div className="editor-field"> {/*открытие квиза поле ввода*/}
+        <label className="editor-label">Start Date & Time (МСК):</label>
+        <input
+          type="datetime-local"
+          value={quizStart}
+          onChange={(e) => setQuizStart(e.target.value)}
+          className="editor-input"
+        />
+      </div>
+
+      <div className="editor-field"> {/*закрытие квиза поле ввода*/}
+        <label className="editor-label">End Date & Time (МСК):</label>
+        <input
+          type="datetime-local"
+          value={quizEnd}
+          onChange={(e) => setQuizEnd(e.target.value)}
+          className="editor-input"
         />
       </div>
 
