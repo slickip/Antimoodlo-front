@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import api from "../services/Api";
 import Timer from "../components/Timer";
 import "../styles/ConfigUploadPage.css";
-// import MatchingQuestion from "./MatchingQuestion";
+import MatchingQuestion from "../components/MatchingQuestions";
 
 
 function parseMoscow(iso) {
@@ -109,27 +109,33 @@ function Quiz({ quizConfig }) {
 
   
   // Общая функция подсчёта результата
-  const computeResult = () => {
-    let correctCount = 0;
-    questions.forEach(q => {
-      const given = answers[q.id];
-      if (q.type === "single") {
-        if (given === q.correct_option_index) correctCount++;
-  //     } else if (q.type === "matching") {
-  //       const given = answers[q.id] || {};
-  //       const correct = q.correct_matches;
-  //       const allMatched = Object.keys(correct).every(k => given[k] === correct[k]);
-  //       if (allMatched) 
-  //         correctCount++;
-  }
-  else {
-        const a = (given || []).slice().sort().toString();
-        const b = q.correct_option_indexes.slice().sort().toString();
-        if (a === b) correctCount++;
+ const computeResult = () => {
+  let correctCount = 0;
+
+  questions.forEach(q => {
+    const given = answers[q.id];
+
+    if (q.type === "single") {
+      if (given === q.correct_option_index) {
+        correctCount++;
       }
-    });
-    setResult(`✅ Правильных: ${correctCount} из ${questions.length}`);
-  };
+    } else if (q.type === "matching") {
+      const givenMatching = answers[q.id] || {};
+      const correct = q.correct_matches;
+      const allMatched = Object.keys(correct).every(k => givenMatching[k] === correct[k]);
+      if (allMatched) {
+        correctCount++;
+      }
+    } else {
+      const a = (given || []).slice().sort().toString();
+      const b = q.correct_option_indexes.slice().sort().toString();
+      if (a === b) correctCount++;
+    }
+  });
+
+  setResult(`✅ Правильных: ${correctCount} из ${questions.length}`);
+};
+
 
   // автоматическая «обрезка» по реальному времени окончания
   useEffect(() => {
@@ -197,19 +203,19 @@ return (
         // 5b) показываем вопросы + кнопку
         <>
           {questions.map(q => {
-  // if (q.type === "matching") {
-  //   return (
-  //     <div key={q.id} style={{ marginBottom: 24 }}>
-  //       <strong>{q.id}. {q.question}</strong>
-  //       <MatchingQuestion
-  //         question={q}
-  //         answer={answers}
-  //         setAnswer={setAnswers}
-  //         disabled={expired}
-  //       />
-  //     </div>
-  //   );
-  // }
+  if (q.type === "matching") {
+    return (
+      <div key={q.id} style={{ marginBottom: 24 }}>
+        <strong>{q.id}. {q.question}</strong>
+        <MatchingQuestion
+          question={q}
+          answer={answers}
+          setAnswer={setAnswers}
+          disabled={expired}
+        />
+      </div>
+    );
+  }
 
   const isMultiple = q.type === "multiple";
   return (
@@ -292,7 +298,10 @@ function ConfigUploadPage() {
     type: "single",
     options: ["", ""],
     correctOption: null,
-    correctOptions: []
+    correctOptions: [],
+    left_items: [""],
+    right_items: [""],
+    correct_matches: {}
   });
 
   useEffect(() => {
@@ -327,22 +336,12 @@ function ConfigUploadPage() {
         setYamlText(text);
         
         try {
-          const response = await api.uploadYamlFile(file);
-          setQuizConfig(response.data);
-          setError(null);
-          setShowModal(true);
-        } catch (apiError) {
-          console.warn("API upload failed, trying local parsing:", apiError);
-          try {
-            const parsed = yaml.load(text);
-            setQuizConfig(parsed);
-            setError(null);
-            setShowModal(true);
-          } catch (parseError) {
-            setError("Ошибка парсинга YAML: " + parseError.message);
-            setQuizConfig(null);
-          }
-        }
+    const text = await file.text();
+    const parsed = yaml.load(text);
+  } catch (err) {
+    console.error("❌ Ошибка при разборе YAML:", err);
+    alert("Не удалось прочитать YAML-файл");
+  } 
       };
       reader.readAsText(file);
     } catch (err) {
@@ -404,7 +403,7 @@ function ConfigUploadPage() {
       if (parsed.quiz.duration) {
         setQuizDurationInput(parsed.quiz.duration);
       }
-
+      
       if (parsed.quiz.start) {
         const date = new Date(parsed.quiz.start);
         const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
@@ -423,18 +422,39 @@ function ConfigUploadPage() {
       setYamlError(`YAML parsing error: ${e.message}`);
     }
   };
+const isDisabled = () => {
+  const textEmpty = !currentQuestion.text.trim();
+
+  if (currentQuestion.type === "single") {
+    return textEmpty || currentQuestion.correctOption === null || currentQuestion.options.every(opt => !opt.trim());
+  }
+
+  if (currentQuestion.type === "multiple") {
+    return textEmpty || currentQuestion.correctOptions.length === 0 || currentQuestion.options.every(opt => !opt.trim());
+  }
+
+  if (currentQuestion.type === "matching") {
+    const leftFilled = currentQuestion.left_items?.filter(item => item.trim()).length;
+    const rightFilled = currentQuestion.right_items?.filter(item => item.trim()).length;
+    const matches = currentQuestion.correct_matches || {};
+    const allMatched = leftFilled > 0 && rightFilled > 0 && leftFilled === Object.keys(matches).length;
+    return textEmpty || !allMatched;
+  }
+
+  return true;
+};
 
   const saveQuiz = async () => {
     const quizData = {
       quizTitle,
       quizDescription,
+      questions,
       duration: quizDurationInput,
       start: quizStart,
-      end: quizEnd,
-      questions,
+      end: quizEnd
     };
 
-    if (quizStart && quizEnd && new Date(quizStart) >= new Date(quizEnd)) {
+     if (quizStart && quizEnd && new Date(quizStart) >= new Date(quizEnd)) {
       alert("Дата окончания должна быть позже даты начала");
       return;
     }
@@ -503,26 +523,50 @@ function ConfigUploadPage() {
   };
 
   const addQuestion = () => {
-    const newQuestion = {
-      id: questions.length + 1,
-      question: currentQuestion.text,
-      type: currentQuestion.type,
-      options: currentQuestion.options.filter(opt => opt.trim() !== ""),
-      ...(currentQuestion.type === "single" 
-        ? { correct_option_index: currentQuestion.correctOption } 
-        : { correct_option_indexes: currentQuestion.correctOptions })
-    };
-
-    setQuestions([...questions, newQuestion]);
-    setCurrentQuestion({
-      id: questions.length + 2,
-      text: "",
-      type: "single",
-      options: ["", ""],
-      correctOption: null,
-      correctOptions: []
-    });
+  const base = {
+    id: questions.length + 1,
+    question: currentQuestion.text,
+    type: currentQuestion.type
   };
+
+  let newQuestion;
+
+  if (currentQuestion.type === "matching") {
+    newQuestion = {
+      ...base,
+      left_items: currentQuestion.left_items.filter(item => item.trim() !== ""),
+      right_items: currentQuestion.right_items.filter(item => item.trim() !== ""),
+      correct_matches: currentQuestion.correct_matches
+    };
+  } else if (currentQuestion.type === "single") {
+    newQuestion = {
+      ...base,
+      options: currentQuestion.options.filter(opt => opt.trim() !== ""),
+      correct_option_index: currentQuestion.correctOption
+    };
+  } else {
+    newQuestion = {
+      ...base,
+      options: currentQuestion.options.filter(opt => opt.trim() !== ""),
+      correct_option_indexes: currentQuestion.correctOptions
+    };
+  }
+
+  setQuestions([...questions, newQuestion]);
+
+  setCurrentQuestion({
+    id: questions.length + 2,
+    text: "",
+    type: "single",
+    options: ["", ""],
+    correctOption: null,
+    correctOptions: [],
+    left_items: [""],
+    right_items: [""],
+    correct_matches: {}
+  });
+};
+
 
   const updateOption = (index, value) => {
     const newOptions = [...currentQuestion.options];
@@ -592,9 +636,9 @@ function ConfigUploadPage() {
       quiz: {
         title: quizTitle,
         description: quizDescription,
-        duration: quizDurationInput,
         start: quizStart,
         end: quizEnd,
+        duration: quizDurationInput,
         questions: questions
       }
     });
@@ -602,7 +646,6 @@ function ConfigUploadPage() {
       alert("Дата окончания должна быть позже даты начала");
       return;
     }
-
     setShowModal(true);
   };
 
@@ -642,7 +685,7 @@ function ConfigUploadPage() {
         />
       </div>
 
-      <div className="editor-field"> {/*открытие квиза поле ввода*/}
+      <div className="editor-field"> {/*открытие квиза поле ввода*/}Add commentMore actions
         <label className="editor-label">Start Date & Time (МСК):</label>
         <input
           type="datetime-local"
@@ -661,7 +704,6 @@ function ConfigUploadPage() {
           className="editor-input"
         />
       </div>
-
       <div className="question-container">
         <h3 className="section-title">Add Question</h3>
         
@@ -690,53 +732,133 @@ function ConfigUploadPage() {
           >
             <option value="single">Single correct answer</option>
             <option value="multiple">Multiple correct answers</option>
+            <option value="matching">Matching correct answer</option>
           </select>
         </div>
+        {currentQuestion.type === "matching" && ( //Я ХЗ ТУТ ЛИ ЭТО ДОЛЖНО НАХОДИТСЯ
+  <div>
+    {/* Left column */}
+    <div className="editor-field">
+      <label className="editor-label">Left Column:</label>
+      {currentQuestion.left_items.map((item, index) => (
+        <input
+          key={index}
+          type="text"
+          value={item}
+          onChange={e => {
+            const newLeft = [...currentQuestion.left_items];
+            newLeft[index] = e.target.value;
+            setCurrentQuestion({...currentQuestion, left_items: newLeft});
+          }}
+          placeholder={`Left ${index + 1}`}
+          className="option-input"
+        />
+      ))}
+      <button onClick={() =>
+        setCurrentQuestion({...currentQuestion, left_items: [...currentQuestion.left_items, ""]})
+      } className="add-option-btn">
+        <FiPlus size={16} /> Add Left
+      </button>
+    </div>
 
-        <div className="editor-field">
-          <label className="editor-label">Options:</label>
-          {currentQuestion.options.map((option, index) => (
-            <div key={index} className="option-row">
-              <input
-                type={currentQuestion.type === "single" ? "radio" : "checkbox"}
-                name={`correct-answer-${currentQuestion.id}`}
-                checked={
-                  currentQuestion.type === "single" 
-                    ? currentQuestion.correctOption === index 
-                    : currentQuestion.correctOptions.includes(index)
+    {/* Right column */}
+    <div className="editor-field">
+      <label className="editor-label">Right Column:</label>
+      {currentQuestion.right_items.map((item, index) => (
+        <input
+          key={index}
+          type="text"
+          value={item}
+          onChange={e => {
+            const newRight = [...currentQuestion.right_items];
+            newRight[index] = e.target.value;
+            setCurrentQuestion({...currentQuestion, right_items: newRight});
+          }}
+          placeholder={`Right ${index + 1}`}
+          className="option-input"
+        />
+      ))}
+      <button onClick={() =>
+        setCurrentQuestion({...currentQuestion, right_items: [...currentQuestion.right_items, ""]})
+      } className="add-option-btn">
+        <FiPlus size={16} /> Add Right
+      </button>
+    </div>
+
+    {/* Correct matches */}
+    <div className="editor-field">
+      <label className="editor-label">Correct Matches:</label>
+      {currentQuestion.left_items.map((left, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", marginBottom: 4 }}>
+          <span style={{ width: 80 }}>{left || `Left ${i + 1}`}</span>
+          <select
+            value={currentQuestion.correct_matches[left] || ""}
+            onChange={e => {
+              setCurrentQuestion({
+                ...currentQuestion,
+                correct_matches: {
+                  ...currentQuestion.correct_matches,
+                  [left]: e.target.value
                 }
-                onChange={(e) => handleCorrectAnswerChange(index, e.target.checked)}
-                className="correct-answer-input"
-              />
-              <input
-                type="text"
-                value={option}
-                onChange={(e) => updateOption(index, e.target.value)}
-                className="option-input"
-                placeholder={`Option ${index + 1}`}
-              />
-              <button 
-                onClick={() => removeOption(index)}
-                className="remove-option-btn"
-              >
-                <FiTrash2 />
-              </button>
-            </div>
-          ))}
-          <button
-            onClick={addOption}
-            className="add-option-btn"
+              });
+            }}
+            className="editor-select"
           >
-            <FiPlus size={16} /> Add Option
-          </button>
+            <option value="">Select match</option>
+            {currentQuestion.right_items.map((right, j) => (
+              <option key={j} value={right}>{right}</option>
+            ))}
+          </select>
         </div>
+      ))}
+    </div>
+  </div>
+)}
+
+{(currentQuestion.type === "single" || currentQuestion.type === "multiple") && (
+  <div className="editor-field">
+    <label className="editor-label">Options:</label>
+    {currentQuestion.options.map((option, index) => (
+      <div key={index} className="option-row">
+        <input
+          type={currentQuestion.type === "single" ? "radio" : "checkbox"}
+          name={`correct-answer-${currentQuestion.id}`}
+          checked={
+            currentQuestion.type === "single"
+              ? currentQuestion.correctOption === index
+              : currentQuestion.correctOptions.includes(index)
+          }
+          onChange={(e) => handleCorrectAnswerChange(index, e.target.checked)}
+          className="correct-answer-input"
+        />
+        <input
+          type="text"
+          value={option}
+          onChange={(e) => updateOption(index, e.target.value)}
+          className="option-input"
+          placeholder={`Option ${index + 1}`}
+        />
+        <button 
+          onClick={() => removeOption(index)}
+          className="remove-option-btn"
+        >
+          <FiTrash2 />
+        </button>
+      </div>
+    ))}
+    <button
+      onClick={addOption}
+      className="add-option-btn"
+    >
+      <FiPlus size={16} /> Add Option
+    </button>
+  </div>
+)}
+
 
         <button
           onClick={addQuestion}
-          disabled={!currentQuestion.text || 
-                   currentQuestion.options.every(opt => !opt.trim()) ||
-                   (currentQuestion.type === "single" && currentQuestion.correctOption === null) ||
-                   (currentQuestion.type === "multiple" && currentQuestion.correctOptions.length === 0)}
+          disabled={isDisabled()}
           className="add-question-btn"
         >
           Add Question
@@ -752,7 +874,12 @@ function ConfigUploadPage() {
                 <div>
                   <div className="question-summary">{q.id}. {q.question}</div>
                   <div className="question-type">
-                    Type: {q.type === "single" ? "Single answer" : "Multiple answers"}
+                    Type: {q.type === "single"
+                            ? "Single answer"
+                            : q.type === "matching"
+                              ? "Matching answers"
+                              : "Multiple answers"}
+
                   </div>
                 </div>
                 <button 

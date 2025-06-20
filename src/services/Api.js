@@ -175,49 +175,76 @@ console.log('Создан квиз с ID:', quizRes.data.id);
 
     // 2) Добавляем вопросы
     for (const q of questions) {
-      const questionRes = await api.post(`/quizzes/${quizId}/questions`, {
-      questiontext: q.question,
-      questiontypeid: q.type === 'single' ? 1 : 2,
-      quizid: quizId
+  const questionRes = await api.post(`/quizzes/${quizId}/questions`, {
+    questiontext: q.question,
+    questiontypeid: q.type === 'single' ? 1 : q.type === 'multiple' ? 2 : 3,
+    quizid: quizId
+  });
+  const questionId = questionRes.data.id;
+  console.log('Добавлен вопрос:', questionRes.data);
+
+  // Matching question (обработка отдельно)
+  if (q.type === 'matching') {
+    // Сохраняем пары: left_items, right_items, correct_matches
+    const { left_items, right_items, correct_matches } = q;
+
+    for (const leftItem of left_items) {
+      await api.post(`/questions/${questionId}/options`, {
+        optiontext: leftItem,
+        questionid: questionId,
+        column: 'left'
       });
-      const questionId = questionRes.data.id;
-      console.log('Добавлен вопрос:', questionRes.data);
-
-      // 3) Добавляем варианты ответов
-      const optionIds = [];
-      for (const optText of q.options) {
-        const optRes = await api.post(
-          `/questions/${questionId}/options`,
-          {
-            optiontext: optText,
-            questionid: questionId
-          }
-        );
-        optionIds.push(optRes.data.id);
-      }
-
-      // 4) Помечаем правильные ответы
-      if (q.type === 'single' && q.correct_option_index != null) {
-        await api.post(
-          `/questions/${questionId}/answers/correct`,
-          {
-            optionid:   optionIds[q.correct_option_index],
-            questionid: questionId
-          }
-        );
-      }
-      if (q.type === 'multiple' && Array.isArray(q.correct_option_indexes)) {
-        for (const idx of q.correct_option_indexes) {
-          await api.post(
-            `/questions/${questionId}/answers/correct`,
-            {
-              optionid:   optionIds[idx],
-              questionid: questionId
-            }
-          );
-        }
-      }
     }
+
+    for (const rightItem of right_items) {
+      await api.post(`/questions/${questionId}/options`, {
+        optiontext: rightItem,
+        questionid: questionId,
+        column: 'right'
+      });
+    }
+
+   for (const [left, right] of Object.entries(correct_matches)) {
+  await api.post(`/questions/${questionId}/answers/match`, {
+    id: 0,
+    lefttext: left,
+    righttext: right,
+    questionid: questionId
+  });
+}
+
+
+
+    continue; // ❗ переходим к следующему вопросу
+  }
+
+  // 🔽 Обычная обработка: single / multiple
+  const optionIds = [];
+  for (const optText of q.options) {
+    const optRes = await api.post(`/questions/${questionId}/options`, {
+      optiontext: optText,
+      questionid: questionId
+    });
+    optionIds.push(optRes.data.id);
+  }
+
+  if (q.type === 'single' && q.correct_option_index != null) {
+    await api.post(`/questions/${questionId}/answers/correct`, {
+      optionid: optionIds[q.correct_option_index],
+      questionid: questionId
+    });
+  }
+
+  if (q.type === 'multiple' && Array.isArray(q.correct_option_indexes)) {
+    for (const idx of q.correct_option_indexes) {
+      await api.post(`/questions/${questionId}/answers/correct`, {
+        optionid: optionIds[idx],
+        questionid: questionId
+      });
+    }
+  }
+}
+
 
     console.log("Квиз сохранён на сервере:", quizId);
     return quizRes;
@@ -236,19 +263,8 @@ console.log('Создан квиз с ID:', quizRes.data.id);
   deleteQuizFromServer(id) {
     return this.deleteQuiz(id);
   },
-  
-  // Метод для загрузки YAML файла
-  uploadYamlFile(file) {
-    const formData = new FormData();
-    formData.append('file', file);
-    return api.post('/quizzes/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-  },
 
   getUsers() {
-  return api.get('/users');
+  return api.get('/users'); 
   }
 };
