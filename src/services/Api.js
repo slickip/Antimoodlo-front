@@ -250,8 +250,49 @@ console.log('Создан квиз с ID:', quizRes.data.id);
     return quizRes;
   },
 
+  async loadQuizPreview(quizId) {
+  const quizRes = await api.get(`/quizzes/${quizId}`);
+  const quiz = quizRes.data;
 
-  
+  const questionsRes = await api.get(`/quizzes/${quizId}/questions`);
+  const questions = [];
+
+  for (const q of questionsRes.data) {
+    const questionId = q.id;
+    const optionsRes = await api.get(`/questions/${questionId}/options`);
+    const correctRes = await api.get(`/questions/${questionId}/answers/correct`);
+
+    // matching: correct answers come as pairs
+    const isMatching = q.questiontypeid === 3;
+
+    questions.push({
+      id: questionId,
+      question: q.questiontext,
+      type: q.questiontypeid === 1 ? 'single' : q.questiontypeid === 2 ? 'multiple' : 'matching',
+      options: isMatching ? undefined : optionsRes.data.map(opt => opt.optiontext),
+      left_items: isMatching ? optionsRes.data.filter(opt => opt.column === 'left').map(opt => opt.optiontext) : undefined,
+      right_items: isMatching ? optionsRes.data.filter(opt => opt.column === 'right').map(opt => opt.optiontext) : undefined,
+      correct_option_index: q.questiontypeid === 1 ? correctRes.data[0]?.optionid : undefined,
+      correct_option_indexes: q.questiontypeid === 2 ? correctRes.data.map(a => a.optionid) : undefined,
+      correct_matches: isMatching
+        ? Object.fromEntries(correctRes.data.map(a => [a.lefttext, a.righttext]))
+        : undefined
+    });
+  }
+
+  return {
+    id: quiz.id,
+    title: quiz.title,
+    description: quiz.description,
+    duration: quiz.duration,
+    questions
+  };
+},
+
+  getAllAnswers(questionId) {
+  return api.get(`/questions/${questionId}/answers`);
+},
+
   loadQuizFromServer(id) {
     return this.getQuiz(id);
   },

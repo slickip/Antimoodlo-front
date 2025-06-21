@@ -482,27 +482,35 @@ const isDisabled = () => {
     }
   };
 
-  const loadSavedQuiz = async (quiz) => {
-    try {
-      setIsLoading(true);
-      const response = await api.loadQuizFromServer(quiz.id);
-      const serverQuiz = response.data;
-      setQuizTitle(serverQuiz.title || "");
-      setQuizDescription(serverQuiz.description || "");
-      setQuizStart(serverQuiz.start || "");
-      setQuizEnd(serverQuiz.end || "");
-      setQuestions(serverQuiz.questions || []);
-      setActiveTab('create');
-    } catch (error) {
-      console.warn("Failed to load from server, using local data:", error);
-      setQuizTitle(quiz.title);
-      setQuizDescription(quiz.description);
-      setQuestions(quiz.questions);
-      setActiveTab('create');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+ const loadSavedQuiz = async (quiz) => {
+  try {
+    setIsLoading(true);
+    const response = await api.loadQuizFromServer(quiz.id);
+    const serverQuiz = response.data;
+
+    // Устанавливаем поля из базы
+    setQuizTitle(serverQuiz.title || "");
+    setQuizDescription(serverQuiz.description || "");
+    setQuizStart(serverQuiz.startdate || "");
+    setQuizEnd(serverQuiz.enddate || "");
+
+    // 🚩 Правильно: получаем вопросы с сервера
+    const questionsResponse = await api.getQuestions(quiz.id);
+    const serverQuestions = questionsResponse.data;
+
+    setQuestions(serverQuestions || []);
+    setActiveTab('create');
+  } catch (error) {
+    console.warn("Failed to load from server, using local data:", error);
+    setQuizTitle(quiz.title);
+    setQuizDescription(quiz.description);
+    setQuestions(quiz.questions);
+    setActiveTab('create');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const deleteSavedQuiz = async (id, e) => {
     e.stopPropagation();
@@ -919,31 +927,129 @@ const isDisabled = () => {
     </div>
   );
 
+  // 1) Функция для загрузки полного превью из БД
+const handlePreviewSavedQuiz = async (quizMeta) => {
+  setIsLoading(true);
+  try {
+    // a) метаданные квиза
+    const { data: quizData } = await api.getQuiz(quizMeta.id);
+
+    // b) вопросы
+    const { data: questionsList } = await api.getQuestions(quizMeta.id);
+
+    // c) для каждого вопроса — все ответы
+    const questions = await Promise.all(
+      questionsList.map(async q => {
+        const { data: ans } = await api.getAllAnswers(q.id);
+        const type = q.questiontypeid === 1
+          ? 'single'
+          : q.questiontypeid === 2
+            ? 'multiple'
+            : 'matching';
+
+        if (type === 'single') {
+          // варианты + индекс правильного
+          const options = ans.options.map(o => o.optiontext);
+          const correct = ans.correctAnswers[0]?.optionid;
+          return {
+            id: q.id,
+            question: q.questiontext,
+            type,
+            options,
+            correct_option_index: correct != null
+              ? options.findIndex((_, i) => ans.correctAnswers[0].optionid === ans.options?.[i]?.id)
+              : undefined
+          };
+        }
+
+        if (type === 'multiple') {
+          const options = ans.options.map(o => o.optiontext);
+          const correctIndexes = ans.correctAnswers.map(ca =>
+            options.findIndex((_, i) => ca.optionid === ans.options[i].id)
+          );
+          return {
+            id: q.id,
+            question: q.questiontext,
+            type,
+            options,
+            correct_option_indexes: correctIndexes
+          };
+        }
+
+        // matching
+        const left_items  = ans.options.filter(o => !ans.matchPairs.find(mp => mp.righttext === o.optiontext)).map(o => o.optiontext);
+        const right_items = ans.options.filter(o => !left_items.includes(o.optiontext)).map(o => o.optiontext);
+        const correct_matches = Object.fromEntries(
+          ans.matchPairs.map(mp => [mp.lefttext, mp.righttext])
+        );
+        return {
+          id: q.id,
+          question: q.questiontext,
+          type,
+          left_items,
+          right_items,
+          correct_matches
+        };
+      })
+    );
+
+    // d) Собираем объект для модалки и открываем
+    setQuizConfig({
+      quiz: {
+        title:       quizData.title,
+        description: quizData.description,
+        start:       quizData.startdate,
+        end:         quizData.enddate,
+        duration:    quizData.duration,
+        questions
+      }
+    });
+    setShowModal(true);
+
+  } catch (err) {
+    console.error("Ошибка при загрузке превью квиза:", err);
+    alert("Не удалось загрузить превью теста из базы");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
   const renderSavedQuizzes = () => (
-    <div className="saved-quizzes-container">
-      <h2 className="section-title">Saved Quizzes</h2>
-      
-      {isLoading ? (
-        <p className="loading-text">Loading quizzes...</p>
-      ) : savedQuizzes.length === 0 ? (
-        <p className="no-quizzes-text">No saved quizzes yet</p>
-      ) : (
-        <div className="quizzes-list">
-          {savedQuizzes.map((quiz) => (
-            <div 
-              key={quiz.id}
-              onClick={() => loadSavedQuiz(quiz)}
-              className="quiz-item"
-            >
-              <div className="quiz-header">
-                <div>
-                  <h3 className="quiz-title">{quiz.title}</h3>
-                  <p className="quiz-description">{quiz.description}</p>
-                  <p className="quiz-date">
-                    {new Date(quiz.createdAt).toLocaleString()}
-                  </p>
-                </div>
-                <button 
+  <div className="saved-quizzes-container">
+    <h2 className="section-title">Saved Quizzes</h2>
+
+    {isLoading ? (
+      <p className="loading-text">Loading quizzes...</p>
+    ) : savedQuizzes.length === 0 ? (
+      <p className="no-quizzes-text">No saved quizzes yet</p>
+    ) : (
+      <div className="quizzes-list">
+        {savedQuizzes.map((quiz) => (
+          <div
+            key={quiz.id}
+            onClick={() => loadSavedQuiz(quiz)}
+            className="quiz-item"
+          >
+            <div className="quiz-header">
+              <div>
+                <h3 className="quiz-title">{quiz.title}</h3>
+                <p className="quiz-description">{quiz.description}</p>
+                <p className="quiz-date">
+                  {new Date(quiz.createdAt).toLocaleString()}
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                <button
+                 onClick={e => {
+                e.stopPropagation();
+                handlePreviewSavedQuiz(quiz);
+                }}
+                className="preview-quiz-btn"
+                >
+                <FiEye />
+                </button>
+
+                <button
                   onClick={(e) => deleteSavedQuiz(quiz.id, e)}
                   className="delete-quiz-btn"
                 >
@@ -951,11 +1057,13 @@ const isDisabled = () => {
                 </button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+);
+
 
   const renderUploadTab = () => (
     <div className="upload-container">
