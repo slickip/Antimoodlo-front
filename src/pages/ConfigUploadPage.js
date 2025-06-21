@@ -7,9 +7,9 @@ import Timer from "../components/Timer";
 import "../styles/ConfigUploadPage.css";
 import MatchingQuestion from "../components/MatchingQuestions";
 
-
+//штука чтобы startdate и enddate определялись и работали корректно
 function parseMoscow(iso) {
-  // Преобразует строку в Date с учетом московского времени
+  //преобразует строку в Date с учетом московского времени
   if (iso instanceof Date || typeof iso === "number") {
     return new Date(iso);
   }
@@ -33,6 +33,7 @@ function getNowMoscow() {
   return new Date(nowLocal.getTime() + deltaMs);
 }
 
+//сайдбар пока пустой, сделать рабочим к следующему mvp
 function Sidebar({ width, setWidth }) {
   const { logout } = useAuth();
 
@@ -54,34 +55,28 @@ function Sidebar({ width, setWidth }) {
   );
 }
 
+//кнопки на сайдбаре
 function SidebarItem({ icon, label, onClick }) {
   return (
-    <div
-      className="sidebar-item"
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = "#010528";
-        const labelSpan = e.currentTarget.querySelector("span");
-        if (labelSpan) labelSpan.style.opacity = 1;
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = "transparent";
-        const labelSpan = e.currentTarget.querySelector("span");
-        if (labelSpan) labelSpan.style.opacity = 0;
-      }}
-      onClick={onClick}
-    >
-      <div className="sidebar-icon">{icon}</div>
-      <span className="sidebar-label">{label}</span>
+      <div
+     className="sidebar-item"
+     onClick={onClick}
+     onMouseEnter={e => e.currentTarget.style.background = "#010528"}
+     onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+   >
+    <div className="sidebar-icon">{icon}</div>
+    <span className="sidebar-label" style={{ opacity: 1 }}>{label}</span>
     </div>
   );
 }
 
+//вроде как окно, открывающееся при просмотре превью квиза
 function QuizModal({ visible, onClose, quizConfig }) {
-  if (!visible) return null;
+  if (!visible) return null; //чтобы окно не высвечивалось когда не надо 
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content">
+      <div className="modal-content"> 
         <button
           onClick={onClose}
           aria-label="Close modal"
@@ -89,32 +84,38 @@ function QuizModal({ visible, onClose, quizConfig }) {
         >
           <FiX />
         </button>
+        {/*строка ниже нужна чтобы рендерился сам квиз*/}
         <Quiz quizConfig={quizConfig} />
       </div>
     </div>
   );
 }
 
+//Quiz() показывает вопросы квиза и проверяет ответы пользователя, включая таймер, контроль времени и подсчёт правильных ответов.
 function Quiz({ quizConfig }) {
+  //объект, где хранятся все ответы пользователя: answers[q.id] 
   const [answers, setAnswers]     = useState({});
+  //результат типо "Правильно x ответов из y"
   const [result, setResult]       = useState(null);
+  //флаг, указывающий на вышедшее время
   const [isTimeUp, setIsTimeUp]   = useState(false);
 
+  //база квиза
   const { start, end, title, description, questions, duration } = quizConfig.quiz;
+
+  //время и дедлайн
   const startDate = parseMoscow(start);
   const endDate   = parseMoscow(end);
-
   const nowMoscow = getNowMoscow();
   const expired   = nowMoscow > endDate || isTimeUp;
 
   
-  // Общая функция подсчёта результата
+  //compareResult() подсчитывает количество правильных ответов
  const computeResult = () => {
   let correctCount = 0;
 
   questions.forEach(q => {
     const given = answers[q.id];
-
     if (q.type === "single") {
       if (given === q.correct_option_index) {
         correctCount++;
@@ -137,19 +138,20 @@ function Quiz({ quizConfig }) {
 };
 
 
-  // автоматическая «обрезка» по реальному времени окончания
+  //useEffect() используется для автоматической остановки квиза, если сгорел дедлайн
   useEffect(() => {
-    if (result) return;
+    if (result) return; //если уже посчитали — не продолжаем
     const id = setInterval(() => {
       if (getNowMoscow() > endDate) {
-        setIsTimeUp(true);
+        setIsTimeUp(true); 
         computeResult();
         clearInterval(id);
       }
-    }, 500);
-    return () => clearInterval(id);
+    }, 500); //проверка каждые полсекунды
+    return () => clearInterval(id); 
   }, [endDate, questions, answers, result]);
 
+  //useEffect() используется для автоматической остановки квиза, если закончилось время на таймере
   useEffect(() => {
     if (isTimeUp && !result) {
       computeResult();
@@ -171,7 +173,13 @@ function Quiz({ quizConfig }) {
   }
   
 
-  // 3) хелпер для обработки кликов
+  /*handleChange() используется для обработки выбора ответов 
+  ***********************
+  ничего не делает если квиз закончился из-за isTimeUp()
+  ***********************
+  Если вопрос с множественным выбором (multiple), то добавляет или удаляет optionIndex из списка выбранных.
+  ***********************
+  Если вопрос с одиночным выбором (single), то просто устанавливает номер выбранного варианта. */
   const handleChange = (questionId, optionIndex, isMultiple) => {
     if (isTimeUp || result) return;
     setAnswers(prev => {
@@ -197,11 +205,12 @@ return (
       {!result && <Timer duration={duration} onTimeUp={() => setIsTimeUp(true)} />}
 
       {expired && result ? (
-        // 5a) время вышло и результат уже вычислен
+        // a) время вышло и результат уже вычислен
         <p style={{ fontWeight: "bold", marginTop: 12 }}>{result}</p>
       ) : (
-        // 5b) показываем вопросы + кнопку
+        // b) показываем вопросы + кнопку
         <>
+  {/* просто отображение разных типов вопросов */}
           {questions.map(q => {
   if (q.type === "matching") {
     return (
@@ -245,7 +254,7 @@ return (
   );
 })}
 
-
+        {/*кнопка для проверки ответов*/}
           <button
             onClick={() => setIsTimeUp(true)}
             disabled={expired}
@@ -259,6 +268,7 @@ return (
   );
 }
 
+//просто декоративная штука, не трогаем
 function CustomCheckbox({ checked, isRadio }) {
   return (
     <span
@@ -275,6 +285,12 @@ function CustomCheckbox({ checked, isRadio }) {
   );
 }
 
+/*useState(...) хранит всё — от заголовка до YAML-текста
+
+useEffect(...) при монтировании вызывает getQuizzes() и сохраняет результат
+
+handleFileUpload(...) — читает YAML-файл, парсит его и устанавливает текст в yamlText. (Сейчас он не делает setQuizConfig — это надо будет поправить для полной загрузки данных)
+ */
 function ConfigUploadPage() {
   const [quizStart, setQuizStart] = useState("");
   const [quizEnd, setQuizEnd] = useState("");
@@ -352,6 +368,7 @@ function ConfigUploadPage() {
     }
   };
 
+  //Экспортирует YAML-файл на основе текущего текста yamlText.
   const exportYaml = () => {
   let filename = "quiz_config";
 
@@ -359,8 +376,8 @@ function ConfigUploadPage() {
     const parsed = yaml.load(yamlText);
     if (parsed && parsed.quiz && parsed.quiz.title) {
       filename = parsed.quiz.title
-        .replace(/\s+/g, "_")         // пробелы → _
-        .replace(/[^\w\-]/g, "");     // убрать всё кроме букв, цифр, _
+        .replace(/\s+/g, "_")         // замена пробелов
+        .replace(/[^\w\-]/g, "");     // убрать всё кроме букв, цифр
     }
   } catch (e) {
     console.warn("Could not parse YAML for filename:", e.message);
@@ -378,6 +395,7 @@ function ConfigUploadPage() {
 };
 
 
+//открывает модальное окно предпросмотра (превью) квиза, если YAML корректный
   const openPreviewFromYaml = () => {
     try {
       const parsed = yaml.load(yamlText);
@@ -389,6 +407,7 @@ function ConfigUploadPage() {
     }
   };
 
+//загружает YAML в GUI-редактор (в поля формы)
   const openInGuiCreator = () => {
     try {
       const parsed = yaml.load(yamlText);
@@ -422,6 +441,7 @@ function ConfigUploadPage() {
       setYamlError(`YAML parsing error: ${e.message}`);
     }
   };
+//проверка, можно ли добавить текущий вопрос (все ли поля заполнены корректно)
 const isDisabled = () => {
   const textEmpty = !currentQuestion.text.trim();
 
@@ -443,7 +463,7 @@ const isDisabled = () => {
 
   return true;
 };
-
+//сохраняет квиз в бд и обновляет список в интерфейсе
   const saveQuiz = async () => {
     const quizData = {
       quizTitle,
@@ -482,6 +502,8 @@ const isDisabled = () => {
     }
   };
 
+//загружает квиз с сервера и устанавливает все поля формы + вопросы
+//я не уверена рабочая ли это часть, но лучше не трогать
  const loadSavedQuiz = async (quiz) => {
   try {
     setIsLoading(true);
@@ -494,7 +516,7 @@ const isDisabled = () => {
     setQuizStart(serverQuiz.startdate || "");
     setQuizEnd(serverQuiz.enddate || "");
 
-    // 🚩 Правильно: получаем вопросы с сервера
+    //получаем вопросы
     const questionsResponse = await api.getQuestions(quiz.id);
     const serverQuestions = questionsResponse.data;
 
@@ -511,7 +533,7 @@ const isDisabled = () => {
   }
 };
 
-
+//удаляет квиз с сервера и из локального списка
   const deleteSavedQuiz = async (id, e) => {
     e.stopPropagation();
     if (!window.confirm('Вы уверены, что хотите удалить этот квиз?')) return;
@@ -530,6 +552,7 @@ const isDisabled = () => {
     }
   };
 
+//добавляет текущий вопрос в список questions, очищает форму
   const addQuestion = () => {
   const base = {
     id: questions.length + 1,
@@ -575,13 +598,14 @@ const isDisabled = () => {
   });
 };
 
-
+//обновляет конкретный вариант ответа в массиве options
   const updateOption = (index, value) => {
     const newOptions = [...currentQuestion.options];
     newOptions[index] = value;
     setCurrentQuestion({...currentQuestion, options: newOptions});
   };
 
+//добавляет окно для ввода нового варианта ответа
   const addOption = () => {
     setCurrentQuestion({
       ...currentQuestion,
@@ -589,6 +613,7 @@ const isDisabled = () => {
     });
   };
 
+//удаляет один из вариантов ответа. Также корректирует индекс правильного ответа
   const removeOption = (index) => {
     const newOptions = currentQuestion.options.filter((_, i) => i !== index);
     setCurrentQuestion({
@@ -602,7 +627,7 @@ const isDisabled = () => {
         .filter(opt => opt !== index)
     });
   };
-
+//обрабатывает установку/снятие правильных ответов 
   const handleCorrectAnswerChange = (index, isChecked) => {
     if (currentQuestion.type === "single") {
       setCurrentQuestion({...currentQuestion, correctOption: index});
@@ -614,6 +639,7 @@ const isDisabled = () => {
     }
   };
 
+//собирает YAML-файл из текущего состояния квиза и запускает его скачивание
   const generateYAML = () => {
     const quiz = {
       quiz: {
@@ -632,13 +658,25 @@ const isDisabled = () => {
     
     const a = document.createElement("a");
     a.href = url;
-    a.download = `quiz_${Date.now()}.yaml`;
+    let filename = "quiz_config";
+    try {
+    const parsed = yaml.load(yamlText);
+    if (parsed && parsed.quiz && parsed.quiz.title) {
+      filename = parsed.quiz.title
+        .replace(/\s+/g, "_")         // замена пробелов
+        .replace(/[^\w\-]/g, "");     // убрать всё кроме букв, цифр
+    }
+  } catch (e) {
+    console.warn("Could not parse YAML for filename:", e.message);
+  }
+  
+    a.download = `${filename}.yaml`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
-
+//Подготавливает и показывает модальное окно предпросмотра на основе текущих данных в GUI
   const previewQuiz = () => {
     setQuizConfig({
       quiz: {
@@ -1099,10 +1137,13 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
           className="yaml-textarea" //штука чтоб высвечивалась в конструкторе yaml файла
           placeholder="QUIZ EXAMPLE:
 quiz:
-  title: Example quiz (Please write the title in English)
+  title: Example quiz (Please write the title on English)
+  duration: 120
+  start: 2025-06-19T21:00
+  end: 2025-06-30T23:53
   questions:
     - id: 1
-      question: How are you
+      question: How are you?
       type: single
       options:
         - Fine
@@ -1118,6 +1159,21 @@ quiz:
       correct_option_indexes:
         - 0
         - 2
+      - id: 3
+        question: Match next things right
+        type: matching
+        left_items:
+          - Plant
+          - Raise
+          - Build
+        right_items:
+          - a house
+          - a child
+          - a tree
+        correct_matches:
+          Plant: a tree
+          Raise: a child
+          Build: a house
 "
           rows={20}
         />

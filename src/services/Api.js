@@ -111,7 +111,6 @@ export default {
     return api.delete(`/questions/${questionId}`);
   },
 
-  // Работа с вариантами ответов
   getOptions(questionId) {
     return api.get(`/questions/${questionId}/options`);
   },
@@ -128,7 +127,6 @@ export default {
     return api.delete(`/options/${optionId}`);
   },
 
-  // Работа с правильными ответами
   getCorrectAnswers(questionId) {
     return api.get(`/questions/${questionId}/answers/correct`);
   },
@@ -143,37 +141,34 @@ export default {
   
   async saveQuizToServer(quizData) {
     const { quizTitle, questions, duration } = quizData;
-    console.log("Сохраняем квиз:", quizTitle);
-    // 1) Создаём сам квиз
-    // … внутри saveQuizToServer …
-console.log("👉 Отправляем на сервер:", {
-  title:        quizTitle,
-  courseid:    1,
-  duration:     duration,
-  maxgrade:    100,
-  startdate:   new Date().toISOString(),
-  enddate:     end.toISOString(),
-  stateid:     1,
-});
+//     console.log("Сохраняем квиз:", quizTitle);
+// console.log("👉 Отправляем на сервер:", {
+//   title:        quizTitle,
+//   courseid:    1,
+//   duration:     duration,
+//   maxgrade:    100,
+//   startdate:   new Date().toISOString(),
+//   enddate:     end.toISOString(),
+//   stateid:     1,
+// });
 
   const quizRes = await api.post('/quizzes', {
   title:     quizTitle,
-  courseid: 1,                      // уже было верно
-  duration:  duration,                     // верно
-  maxgrade:  100,                    // ← вместо max_grade
-  stateid:   1,                      // ← вместо state_id
-  startdate: new Date().toISOString(), // ← вместо start_date
-  enddate:  end.toISOString() // ← оставляем underscore, сервер его принял
+  courseid: 1,                      
+  duration:  duration,               
+  maxgrade:  100,                    
+  stateid:   1,                      
+  startdate: new Date().toISOString(), 
+  enddate:  end.toISOString() 
 });
 
 
-console.log('Создан квиз с ID:', quizRes.data.id);
+//console.log('Создан квиз с ID:', quizRes.data.id);
 
 
     const quizId = quizRes.data.id;
-    console.log('Создан квиз с ID:', quizId);
+    // console.log('Создан квиз с ID:', quizId);
 
-    // 2) Добавляем вопросы
     for (const q of questions) {
   const questionRes = await api.post(`/quizzes/${quizId}/questions`, {
     questiontext: q.question,
@@ -181,11 +176,9 @@ console.log('Создан квиз с ID:', quizRes.data.id);
     quizid: quizId
   });
   const questionId = questionRes.data.id;
-  console.log('Добавлен вопрос:', questionRes.data);
+  //console.log('Добавлен вопрос:', questionRes.data);
 
-  // Matching question (обработка отдельно)
   if (q.type === 'matching') {
-    // Сохраняем пары: left_items, right_items, correct_matches
     const { left_items, right_items, correct_matches } = q;
 
     for (const leftItem of left_items) {
@@ -215,10 +208,9 @@ console.log('Создан квиз с ID:', quizRes.data.id);
 
 
 
-    continue; // ❗ переходим к следующему вопросу
+    continue;
   }
 
-  // 🔽 Обычная обработка: single / multiple
   const optionIds = [];
   for (const optText of q.options) {
     const optRes = await api.post(`/questions/${questionId}/options`, {
@@ -246,7 +238,7 @@ console.log('Создан квиз с ID:', quizRes.data.id);
 }
 
 
-    console.log("Квиз сохранён на сервере:", quizId);
+    //console.log("Квиз сохранён на сервере:", quizId);
     return quizRes;
   },
 
