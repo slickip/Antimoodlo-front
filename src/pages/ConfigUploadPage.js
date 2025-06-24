@@ -474,10 +474,13 @@ function ConfigUploadPage() {
 
   try {
     const parsed = yaml.load(yamlText);
-    if (parsed && parsed.quiz && parsed.quiz.title) {
+
+    if (parsed?.quiz?.title) {
       filename = parsed.quiz.title
-        .replace(/\s+/g, "_")         // замена пробелов
-        .replace(/[^\w\-]/g, "");     // убрать всё кроме букв, цифр
+        .trim()
+        .replace(/\s+/g, "_")       // заменяем пробелы на "_"
+        .replace(/[^\w\-]/g, "")    // убираем все кроме букв, цифр, _
+        .slice(0, 50);              // ограничим длину имени файла
     }
   } catch (e) {
     console.warn("Could not parse YAML for filename:", e.message);
@@ -487,12 +490,13 @@ function ConfigUploadPage() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${filename}.yaml`;  // ← динамическое имя
+  a.download = `${filename || "quiz_config"}.yaml`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 };
+
 
 
 //открывает модальное окно предпросмотра (превью) квиза, если YAML корректный
@@ -768,17 +772,15 @@ const isDisabled = () => {
     
     const a = document.createElement("a");
     a.href = url;
-    let filename = "quiz_config";
-    try {
-    const parsed = yaml.load(yamlText);
-    if (parsed && parsed.quiz && parsed.quiz.title) {
-      filename = parsed.quiz.title
-        .replace(/\s+/g, "_")         // замена пробелов
-        .replace(/[^\w\-]/g, "");     // убрать всё кроме букв, цифр
+    let filename = quizTitle.trim()
+  .replace(/\s+/g, "_")
+  .replace(/[^\w\-]/g, "")
+  .slice(0, 50); // чтобы файл не был слишком длинным
+
+    if (!filename) {
+      filename = "quiz_config";
     }
-  } catch (e) {
-    console.warn("Could not parse YAML for filename:", e.message);
-  }
+
   
     a.download = `${filename}.yaml`;
     document.body.appendChild(a);
