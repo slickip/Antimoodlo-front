@@ -1187,6 +1187,48 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
   }
 };
 
+const yamlExample = `QUIZ EXAMPLE:
+quiz:
+  title: Example quiz (Please write the title on English)
+  duration: 120
+  start: 2025-06-19T21:00
+  end: 2025-06-30T23:53
+  questions:
+    - id: 1
+      question: How are you?
+      type: single
+      options:
+        - Fine
+        - Bad
+      correct_option_index: 0
+    - id: 2
+      question: Why?
+      type: multiple
+      options:
+        - Because of beautiful day
+        - Everything is bad in my life
+        - Woke up with this mood
+      correct_option_indexes:
+        - 0
+        - 2
+    - id: 3
+      question: Match next things right
+      type: matching
+      left_items:
+        - Plant
+        - Raise
+        - Build
+      right_items:
+        - a house
+        - a child
+        - a tree
+      correct_matches:
+        Plant: a tree
+        Raise: a child
+        Build: a house
+`;
+
+
   const renderSavedQuizzes = () => (
   <div className="saved-quizzes-container">
     <h2 className="section-title">Saved Quizzes</h2>
@@ -1297,46 +1339,7 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
           value={yamlText}
           onChange={handleYamlChange}
           className="yaml-textarea" //штука чтоб высвечивалась в конструкторе yaml файла
-          placeholder="QUIZ EXAMPLE: 
-quiz:
-  title: Example quiz (Please write the title on English) \n
-  duration: 120
-  start: 2025-06-19T21:00
-  end: 2025-06-30T23:53
-  questions:
-    - id: 1
-      question: How are you?
-      type: single
-      options:
-        - Fine
-        - Bad
-      correct_option_index: 0
-    - id: 2
-      question: Why?
-      type: multiple
-      options:
-        - Because of beautiful day
-        - Everything is bad in my life
-        - Woke up with this mood
-      correct_option_indexes:
-        - 0
-        - 2
-      - id: 3
-        question: Match next things right
-        type: matching
-        left_items:
-          - Plant
-          - Raise
-          - Build
-        right_items:
-          - a house
-          - a child
-          - a tree
-        correct_matches:
-          Plant: a tree
-          Raise: a child
-          Build: a house
-"
+          placeholder={yamlExample}
           rows={20}
         />
         
