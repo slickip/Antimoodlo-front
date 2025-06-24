@@ -6,6 +6,8 @@ import api from "../services/Api";
 import Timer from "../components/Timer";
 import "../styles/ConfigUploadPage.css";
 import MatchingQuestion from "../components/MatchingQuestions";
+import { v4 as uuidv4 } from 'uuid';
+
 
 //штука чтобы startdate и enddate определялись и работали корректно
 function parseMoscow(iso) {
@@ -203,103 +205,137 @@ if (a === b) correctCount++;
   };
 
 return (
-    <div>
-      <h2>{title}</h2>
-      <p>{description}</p>
+  <div>
+    <h2>{title}</h2>
+    <p>{description}</p>
 
-      {/* таймер только если ещё нет результата */}
-      {!result && <Timer duration={duration} onTimeUp={() => setIsTimeUp(true)} />}
+    {/* Показываем таймер до тех пор, пока нет результата */}
+    {!result && !isTimeUp && (
+      <Timer duration={duration} onTimeUp={() => setIsTimeUp(true)} />
+    )}
 
-      {expired && result ? (
-        // a) время вышло и результат уже вычислен
-        <p style={{ fontWeight: "bold", marginTop: 12 }}>{result}</p>
-      ) : (
-        // b) показываем вопросы + кнопку
-        <>
-  {/* просто отображение разных типов вопросов */}
-          {questions.map(q => {
-  if (q.type === "matching") {
-    return (
-      <div key={q.id} style={{ marginBottom: 24 }}>
-        <strong>{questions.indexOf(q) + 1}. {q.question}</strong>
-        <MatchingQuestion
-          question={q}
-          answer={answers}
-          setAnswer={setAnswers}
-          disabled={expired}
-        />
-      </div>
-    );
-  }
+    {/* Показываем результат, если он есть */}
+    {result && (
+      <p style={{ fontWeight: "bold", marginTop: 12 }}>{result}</p>
+    )}
 
-   if (q.type === "open") {
-    return (
-      <div key={q.id} style={{ marginBottom: 24 }}>
-        <strong>{questions.indexOf(q) + 1}. {q.question}</strong>
-        <input
-          type="text"
-          value={answers[q.id] || ""}
-          onChange={(e) =>
-            setAnswers((prev) => ({
-              ...prev,
-              [q.id]: e.target.value,
-            }))
-          }
-          disabled={expired}
-          style={{
-            marginTop: 8,
-            padding: 6,
-            fontSize: 16,
-            width: "100%",
-            maxWidth: 400,
-            boxSizing: "border-box",
-          }}
-        />
-      </div>
-    );
-  }
-  
-  const isMultiple = q.type === "multiple";
-  return (
-    <div key={q.id} style={{ marginBottom: 16 }}>
-      <strong>{questions.indexOf(q) + 1}. {q.question}</strong>
-      {q.options.map((opt, i) => {
-        const checked = isMultiple
-          ? (answers[q.id] || []).includes(i)
-          : answers[q.id] === i;
+    {/* ВСЕГДА показываем вопросы */}
+    {questions.map((q, i) => {
+      if (q.type === "matching") {
         return (
-          <label
-            key={i}
-            style={{ display: "flex", alignItems: "center", marginTop: 4 }}
-          >
-            <input
-              type={isMultiple ? "checkbox" : "radio"}
-              checked={checked}
-              disabled={expired}
-              onChange={() => handleChange(q.id, i, isMultiple)}
-              style={{ marginRight: 8 }}
+          <div key={q.id} style={{ marginBottom: 24 }}>
+            <strong>{i + 1}. {q.question}</strong>
+            <MatchingQuestion
+              question={q}
+              answer={answers}
+              setAnswer={setAnswers}
+              disabled={expired || !!result}
             />
-            <span>{opt}</span>
-          </label>
+          </div>
         );
-      })}
-    </div>
-  );
-})}
+      }
 
-        {/*кнопка для проверки ответов*/}
-          <button
-            onClick={() => setIsTimeUp(true)}
-            disabled={expired}
-            style={{ marginTop: 12 }}
-          >
-            Проверить ответы
-          </button>
-        </>
-      )}
-    </div>
-  );
-}
+      if (q.type === "open") {
+        return (
+          <div key={q.id} style={{ marginBottom: 24 }}>
+            <strong>{i + 1}. {q.question}</strong>
+            <input
+              type="text"
+              value={answers[q.id] || ""}
+              onChange={(e) =>
+                setAnswers((prev) => ({
+                  ...prev,
+                  [q.id]: e.target.value,
+                }))
+              }
+              disabled={expired || !!result}
+              style={{
+                marginTop: 8,
+                padding: 6,
+                fontSize: 16,
+                width: "100%",
+                maxWidth: 400,
+                boxSizing: "border-box",
+              }}
+            />
+            {result && (
+  <div style={{ marginTop: 6 }}>
+    {(answers[q.id] || "").trim().toLowerCase() ===
+    (q.correct_answer_text || "").trim().toLowerCase() ? (
+      <span style={{ color: "green" }}>✅ Верно</span>
+    ) : (
+      <span style={{ color: "red" }}>
+        ❌ Неверно. Правильный ответ: <strong>{q.correct_answer_text}</strong>
+      </span>
+    )}
+  </div>
+)}
+
+          </div>
+        );
+      }
+
+      const isMultiple = q.type === "multiple";
+      return (
+        <div key={q.id} style={{ marginBottom: 16 }}>
+          <strong>{i + 1}. {q.question}</strong>
+          {q.options.map((opt, idx) => {
+            const checked = isMultiple
+              ? (answers[q.id] || []).includes(idx)
+              : answers[q.id] === idx;
+
+            const wasAnswered = !!result; 
+
+            const isCorrect = isMultiple
+              ? (q.correct_option_indexes || []).includes(idx)
+              : q.correct_option_index === idx;
+
+            const isWrongSelected = wasAnswered && checked && !isCorrect;
+
+            const icon = wasAnswered
+              ? isCorrect && checked
+                ? " ✅"
+                : isCorrect && !isMultiple
+                  ? " ✅"
+                  : isWrongSelected
+                    ? " ❌"
+                    : ""
+              : "";
+
+            return (
+              <label
+                key={idx}
+                style={{ display: "flex", alignItems: "center", marginTop: 4 }}
+              >
+                <input
+                  type={isMultiple ? "checkbox" : "radio"}
+                  checked={checked}
+                  disabled={expired || !!result}
+                  onChange={() => handleChange(q.id, idx, isMultiple)}
+                  style={{ marginRight: 8 }}
+                />
+                <span>
+                  {opt}{icon}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      );
+    })}
+
+    {/* Кнопка "Проверить ответы" — только если еще не было ответа */}
+    {!result && (
+      <button
+        onClick={() => setIsTimeUp(true)}
+        style={{ marginTop: 12 }}
+      >
+        Проверить ответы
+      </button>
+    )}
+  </div>
+);}
+
 
 //просто декоративная штука, не трогаем
 function CustomCheckbox({ checked, isRadio }) {
@@ -592,7 +628,7 @@ const isDisabled = () => {
 //добавляет текущий вопрос в список questions, очищает форму
   const addQuestion = () => {
   const base = {
-    id: questions.length + 1,
+    id: uuidv4(),
     question: currentQuestion.text,
     type: currentQuestion.type
   };
@@ -978,7 +1014,8 @@ const isDisabled = () => {
           <h3 className="section-title">Added Questions ({questions.length})</h3>
           <div className="questions-list">
             {questions.map((q, i) => (
-              <div key={i} className="question-item">
+                <div key={q.id} className="question-item">
+
                 <div>
                   <div className="question-summary">{i + 1}. {q.question}</div>
                   <div className="question-type">

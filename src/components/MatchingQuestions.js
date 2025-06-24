@@ -28,51 +28,62 @@ function MatchingQuestion({ question, answer, setAnswer, disabled }) {
         <div>
           <h4>Match to:</h4>
           {left_items.map((left, i) => (
-            <div key={i} style={{ marginBottom: 12 }}>
-              <strong>{left}</strong>
-              <Droppable droppableId={left} direction="horizontal">
-                {(provided) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    style={{
-                      minWidth: 150,
-                      minHeight: 40,
-                      border: "1px dashed #ccc",
-                      padding: 4,
-                      background: "#f9f9f9",
-                      marginTop: 4
-                    }}
-                  >
-                    {answer?.[id]?.[left] && (
-                      <Draggable
-                        draggableId={answer[id][left]}
-                        index={0}
-                        isDragDisabled={disabled}
-                      >
-                        {(provided) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            style={{
-                              padding: "6px 12px",
-                              background: "#e0f7ff",
-                              borderRadius: 4,
-                              ...provided.draggableProps.style
-                            }}
-                          >
-                            {answer[id][left]}
-                          </div>
-                        )}
-                      </Draggable>
-                    )}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </div>
-          ))}
+  <div key={i} style={{ marginBottom: 12 }}>
+    <strong>{left}</strong>
+    <Droppable droppableId={left} direction="horizontal">
+      {(provided) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.droppableProps}
+          style={{
+            minWidth: 150,
+            minHeight: 40,
+            border: "1px dashed #ccc",
+            padding: 4,
+            background: "#f9f9f9",
+            marginTop: 4
+          }}
+        >
+          {answer?.[id]?.[left] && (
+            <Draggable
+              draggableId={answer[id][left]}
+              index={0}
+              isDragDisabled={disabled}
+            >
+              {(provided) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.draggableProps}
+                  {...provided.dragHandleProps}
+                  style={{
+                    padding: "6px 12px",
+                    background: "#e0f7ff",
+                    borderRadius: 4,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    ...provided.draggableProps.style
+                  }}
+                >
+                  <span>{answer[id][left]}</span>
+                  {/* Здесь появится галочка или крест */}
+                  {disabled && question.correct_matches && (
+                    <span style={{ marginLeft: 8 }}>
+                      {answer[id][left] === question.correct_matches[left]
+                        ? "✅"
+                        : "❌"}
+                    </span>
+                  )}
+                </div>
+              )}
+            </Draggable>
+          )}
+          {provided.placeholder}
+        </div>
+      )}
+    </Droppable>
+  </div>
+))}
         </div>
 
         {/* Правый столбец со всеми доступными опциями */}
