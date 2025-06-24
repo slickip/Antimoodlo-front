@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import yaml from "js-yaml";
-import { FiLogOut, FiUpload, FiEye, FiX, FiCheck, FiPlus, FiTrash2, FiSave, FiCode } from "react-icons/fi";
+import { FiLogOut, FiUpload, FiEye, FiX, FiCheck, FiPlus, FiTrash2, FiSave, FiCode, FiRotateCcw, FiRotateCw} from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/Api";
 import Timer from "../components/Timer";
@@ -375,6 +375,8 @@ function ConfigUploadPage() {
   const [quizDescription, setQuizDescription] = useState("");
   const [questions, setQuestions] = useState([]);
   const [yamlText, setYamlText] = useState("");
+  const [yamlHistory, setYamlHistory]   = useState([""]);
+  const [historyIndex, setHistoryIndex] = useState(0);
   const [yamlError, setYamlError] = useState(null);
 
   const [currentQuestion, setCurrentQuestion] = useState({
@@ -410,6 +412,32 @@ function ConfigUploadPage() {
     loadQuizzes();
   }, []);
 
+  const handleYamlChange = (e) => {
+    const value = e.target.value;
+    if (value === yamlText) return;
+    setYamlText(value);
+    setYamlHistory((prev) => {
+      const next = prev.slice(0, historyIndex + 1);
+      next.push(value);
+      setHistoryIndex(next.length - 1);
+      return next;
+    });
+  };
+  
+  const handleUndo = () => {
+    if (historyIndex === 0) return;
+    const idx = historyIndex - 1;
+    setHistoryIndex(idx);
+    setYamlText(yamlHistory[idx]);
+  };
+  
+  const handleRedo = () => {
+    if (historyIndex >= yamlHistory.length - 1) return;
+    const idx = historyIndex + 1;
+    setHistoryIndex(idx);
+    setYamlText(yamlHistory[idx]);
+  };
+  
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -420,7 +448,8 @@ function ConfigUploadPage() {
       reader.onload = async (e) => {
         const text = e.target.result;
         setYamlText(text);
-        
+        setYamlHistory([text]); // сбрасываем стек истории на только что прочитанный файл
+        setHistoryIndex(0);
         try {
     const text = await file.text();
     const parsed = yaml.load(text);
@@ -1233,14 +1262,41 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
       )}
 
       <div className="yaml-editor-container">
-        <h3 className="editor-titleg">YAML Editor</h3>
+      <div
+        className="yaml-editor-header"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center"
+        }}
+      >
+        <h3 className="editor-titleg" style={{ margin: 0 }}>YAML Editor</h3>
+        <div>
+          <button
+            className="icon-btn"
+            onClick={handleUndo}
+            disabled={historyIndex === 0}
+            title="Undo (Ctrl+Z)"
+          >
+            <FiRotateCcw size={18} />
+          </button>
+          <button
+            className="icon-btn"
+            onClick={handleRedo}
+            disabled={historyIndex === yamlHistory.length - 1}
+            title="Redo (Ctrl+Y)"
+          >
+            <FiRotateCw size={18} />
+          </button>
+        </div>
+      </div>
         <textarea
           value={yamlText}
-          onChange={(e) => setYamlText(e.target.value)}
+          onChange={handleYamlChange}
           className="yaml-textarea" //штука чтоб высвечивалась в конструкторе yaml файла
           placeholder="QUIZ EXAMPLE:
 quiz:
-  title: Example quiz (Please write the title on English)
+  title: Example quiz (Please write the title on English) \n
   duration: 120
   start: 2025-06-19T21:00
   end: 2025-06-30T23:53
