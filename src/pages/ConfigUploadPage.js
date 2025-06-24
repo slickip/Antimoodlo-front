@@ -92,7 +92,7 @@ function QuizModal({ visible, onClose, quizConfig }) {
 }
 
 //Quiz() показывает вопросы квиза и проверяет ответы пользователя, включая таймер, контроль времени и подсчёт правильных ответов.
-function Quiz({ quizConfig }) {
+function Quiz({ quizConfig })  {
   //объект, где хранятся все ответы пользователя: answers[q.id] 
   const [answers, setAnswers]     = useState({});
   //результат типо "Правильно x ответов из y"
@@ -127,10 +127,16 @@ function Quiz({ quizConfig }) {
       if (allMatched) {
         correctCount++;
       }
-    } else {
-      const a = (given || []).slice().sort().toString();
-      const b = q.correct_option_indexes.slice().sort().toString();
-      if (a === b) correctCount++;
+    } else if (q.type === "multiple") {
+      const a = Array.isArray(given) ? given.slice().sort().toString() : "";
+const b = Array.isArray(q.correct_option_indexes) ? q.correct_option_indexes.slice().sort().toString() : "";
+if (a === b) correctCount++;
+    } else if (q.type === "open") {
+      const givenText = (given || "").trim().toLowerCase();
+      const correctText = (q.correct_answer_text || "").trim().toLowerCase();
+      if (givenText === correctText) {
+        correctCount++;
+      }
     }
   });
 
@@ -215,7 +221,7 @@ return (
   if (q.type === "matching") {
     return (
       <div key={q.id} style={{ marginBottom: 24 }}>
-        <strong>{q.id}. {q.question}</strong>
+        <strong>{questions.indexOf(q) + 1}. {q.question}</strong>
         <MatchingQuestion
           question={q}
           answer={answers}
@@ -226,10 +232,37 @@ return (
     );
   }
 
+   if (q.type === "open") {
+    return (
+      <div key={q.id} style={{ marginBottom: 24 }}>
+        <strong>{questions.indexOf(q) + 1}. {q.question}</strong>
+        <input
+          type="text"
+          value={answers[q.id] || ""}
+          onChange={(e) =>
+            setAnswers((prev) => ({
+              ...prev,
+              [q.id]: e.target.value,
+            }))
+          }
+          disabled={expired}
+          style={{
+            marginTop: 8,
+            padding: 6,
+            fontSize: 16,
+            width: "100%",
+            maxWidth: 400,
+            boxSizing: "border-box",
+          }}
+        />
+      </div>
+    );
+  }
+  
   const isMultiple = q.type === "multiple";
   return (
     <div key={q.id} style={{ marginBottom: 16 }}>
-      <strong>{q.id}. {q.question}</strong>
+      <strong>{questions.indexOf(q) + 1}. {q.question}</strong>
       {q.options.map((opt, i) => {
         const checked = isMultiple
           ? (answers[q.id] || []).includes(i)
@@ -317,7 +350,8 @@ function ConfigUploadPage() {
     correctOptions: [],
     left_items: [""],
     right_items: [""],
-    correct_matches: {}
+    correct_matches: {},
+    correctAnswerText: ""  
   });
 
   useEffect(() => {
@@ -460,7 +494,10 @@ const isDisabled = () => {
     const allMatched = leftFilled > 0 && rightFilled > 0 && leftFilled === Object.keys(matches).length;
     return textEmpty || !allMatched;
   }
-
+  
+    if (currentQuestion.type === "open") {
+    return textEmpty || !currentQuestion.correctAnswerText.trim();
+  }
   return true;
 };
 //сохраняет квиз в бд и обновляет список в интерфейсе
@@ -574,6 +611,13 @@ const isDisabled = () => {
       ...base,
       options: currentQuestion.options.filter(opt => opt.trim() !== ""),
       correct_option_index: currentQuestion.correctOption
+    }
+  } else if (currentQuestion.type === "open") {
+    newQuestion = {
+    id: questions.length + 1,
+    question: currentQuestion.text,
+    type: "open",
+    correct_answer_text: currentQuestion.correctAnswerText   // ← поле с текстом
     };
   } else {
     newQuestion = {
@@ -779,8 +823,26 @@ const isDisabled = () => {
             <option value="single">Single correct answer</option>
             <option value="multiple">Multiple correct answers</option>
             <option value="matching">Matching correct answer</option>
+            <option value="open">Open answer</option>
           </select>
         </div>
+      {/* если че удалить, хз тут ли опен ансвер должны быть */}
+        {currentQuestion.type === "open" && (
+  <div className="editor-field">
+    <label className="editor-label">Expected Answer:</label>
+    <input
+      type="text"
+      value={currentQuestion.correctAnswerText}
+      onChange={e => setCurrentQuestion({
+        ...currentQuestion,
+        correctAnswerText: e.target.value
+      })}
+      className="editor-input"
+      placeholder="Enter correct answer text"
+    />
+  </div>
+)}
+
         {currentQuestion.type === "matching" && ( //Я ХЗ ТУТ ЛИ ЭТО ДОЛЖНО НАХОДИТСЯ
   <div>
     {/* Left column */}
@@ -918,13 +980,17 @@ const isDisabled = () => {
             {questions.map((q, i) => (
               <div key={i} className="question-item">
                 <div>
-                  <div className="question-summary">{q.id}. {q.question}</div>
+                  <div className="question-summary">{i + 1}. {q.question}</div>
                   <div className="question-type">
                     Type: {q.type === "single"
-                            ? "Single answer"
-                            : q.type === "matching"
-                              ? "Matching answers"
-                              : "Multiple answers"}
+                          ? "Single answer"
+                          : q.type === "multiple"
+                          ? "Multiple answers"
+                          : q.type === "matching"
+                          ? "Matching answers"
+                          : q.type === "open"
+                          ? "Open answer"
+                          : "Unknown"}
 
                   </div>
                 </div>
