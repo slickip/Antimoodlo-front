@@ -142,7 +142,7 @@ if (a === b) correctCount++;
     }
   });
 
-  setResult(`✅ Правильных: ${correctCount} из ${questions.length}`);
+  setResult(`✅ Correct: ${correctCount} out of ${questions.length}`);
 };
 
 
@@ -330,7 +330,7 @@ return (
         onClick={() => setIsTimeUp(true)}
         style={{ marginTop: 12 }}
       >
-        Проверить ответы
+        Submit
       </button>
     )}
   </div>

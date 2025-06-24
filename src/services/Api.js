@@ -127,6 +127,10 @@ export default {
     return api.delete(`/options/${optionId}`);
   },
 
+  addOpenAnswer(questionId, answerData) {
+    return api.post(`/questions/${questionId}/answers/open`, answerData);
+  },
+
   getCorrectAnswers(questionId) {
     return api.get(`/questions/${questionId}/answers/correct`);
   },
@@ -165,18 +169,31 @@ export default {
 
 //console.log('Создан квиз с ID:', quizRes.data.id);
 
+  const questionTypeMap = {
+    single:   1,
+    multiple: 2,
+    matching: 3,
+    open:     3
+  };
 
     const quizId = quizRes.data.id;
-    // console.log('Создан квиз с ID:', quizId);
+    //console.log('Создан квиз с ID:', quizId);
 
+    
     for (const q of questions) {
+      console.log("📤 Creating question:", {
+  text: q.question,
+  type: q.type,
+  typeId: questionTypeMap[q.type]
+});
+
   const questionRes = await api.post(`/quizzes/${quizId}/questions`, {
     questiontext: q.question,
-    questiontypeid: q.type === 'single' ? 1 : q.type === 'multiple' ? 2 : 3,
+    questiontypeid: questionTypeMap[q.type],
     quizid: quizId
   });
   const questionId = questionRes.data.id;
-  //console.log('Добавлен вопрос:', questionRes.data);
+  console.log('Добавлен вопрос:', questionRes.data);
 
   if (q.type === 'matching') {
     const { left_items, right_items, correct_matches } = q;
@@ -188,6 +205,14 @@ export default {
         column: 'left'
       });
     }
+
+  if (q.type === 'open' && q.correct_answer_text) {
+    await api.post(`/questions/${questionId}/answers/open`, {
+      answertext: q.correct_answer_text,
+      questionid: questionId
+    });
+    continue;
+   } 
 
     for (const rightItem of right_items) {
       await api.post(`/questions/${questionId}/options`, {
@@ -211,6 +236,7 @@ export default {
     continue;
   }
 
+  if (q.type !== 'open') {
   const optionIds = [];
   for (const optText of q.options) {
     const optRes = await api.post(`/questions/${questionId}/options`, {
@@ -236,6 +262,7 @@ export default {
     }
   }
 }
+}
 
 
     //console.log("Квиз сохранён на сервере:", quizId);
@@ -249,6 +276,7 @@ export default {
   const questionsRes = await api.get(`/quizzes/${quizId}/questions`);
   const questions = [];
 
+
   for (const q of questionsRes.data) {
     const questionId = q.id;
     const optionsRes = await api.get(`/questions/${questionId}/options`);
@@ -256,20 +284,48 @@ export default {
 
     // matching: correct answers come as pairs
     const isMatching = q.questiontypeid === 3;
+    const isOpen = q.questiontypeid === 4;
 
-    questions.push({
+    let question = {
       id: questionId,
       question: q.questiontext,
-      type: q.questiontypeid === 1 ? 'single' : q.questiontypeid === 2 ? 'multiple' : 'matching',
-      options: isMatching ? undefined : optionsRes.data.map(opt => opt.optiontext),
-      left_items: isMatching ? optionsRes.data.filter(opt => opt.column === 'left').map(opt => opt.optiontext) : undefined,
-      right_items: isMatching ? optionsRes.data.filter(opt => opt.column === 'right').map(opt => opt.optiontext) : undefined,
-      correct_option_index: q.questiontypeid === 1 ? correctRes.data[0]?.optionid : undefined,
-      correct_option_indexes: q.questiontypeid === 2 ? correctRes.data.map(a => a.optionid) : undefined,
+      type:
+        q.questiontypeid === 1
+          ? 'single'
+          : q.questiontypeid === 2
+          ? 'multiple'
+          : q.questiontypeid === 3
+          ? 'matching'
+          : 'open',
+      options: !isMatching && !isOpen ? optionsRes.data.map(opt => opt.optiontext) : undefined,
+      left_items: isMatching
+        ? optionsRes.data.filter(opt => opt.column === 'left').map(opt => opt.optiontext)
+        : undefined,
+      right_items: isMatching
+        ? optionsRes.data.filter(opt => opt.column === 'right').map(opt => opt.optiontext)
+        : undefined,
+      correct_option_index:
+        q.questiontypeid === 1 ? correctRes.data[0]?.optionid : undefined,
+      correct_option_indexes:
+        q.questiontypeid === 2 ? correctRes.data.map(a => a.optionid) : undefined,
       correct_matches: isMatching
         ? Object.fromEntries(correctRes.data.map(a => [a.lefttext, a.righttext]))
-        : undefined
-    });
+        : undefined,
+    };
+
+    // Добавляем open-answer
+    if (isOpen) {
+      try {
+        const openRes = await api.get(`/questions/${questionId}/answers/correct`);
+        const openText = openRes.data.openAnswers?.[0]?.answertext || '';
+        question.correct_answer_text = openText;
+      } catch (err) {
+        console.warn(`Не удалось загрузить open-ответ для вопроса ${questionId}`, err);
+        question.correct_answer_text = '';
+      }
+    }
+
+    questions.push(question);
   }
 
   return {

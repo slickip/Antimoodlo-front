@@ -24,7 +24,7 @@ export default function Timer({ duration, onTimeUp }) {
 
   return (
     <div style={{ fontWeight: "bold", marginBottom: "10px", fontSize: "18px", color: "#010528" }}>
-      ⏱ Осталось времени: {formatTime(secondsLeft)}
+      ⏱ Time left: {formatTime(secondsLeft)}
     </div>
   );
 }

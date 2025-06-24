@@ -5,97 +5,119 @@ function MatchingQuestion({ question, answer, setAnswer, disabled }) {
   const { id, left_items, right_items } = question;
 
   const handleDrop = (result) => {
-    const { source, destination, draggableId } = result;
-    if (!destination) return;
+  const { source, destination, draggableId } = result;
+  if (!destination) return;
 
-    const leftItem = destination.droppableId;
-    setAnswer(prev => ({
-      ...prev,
-      [id]: {
-        ...(prev[id] || {}),
-        [leftItem]: draggableId
+  setAnswer(prev => {
+    const current = { ...(prev[id] || {}) };
+
+    // Удаляем draggableId из всех связей (в любом случае)
+    for (const key in current) {
+      if (current[key] === draggableId) {
+        delete current[key];
       }
-    }));
-  };
+    }
+
+    // Если переместили не в options, то записываем новый match
+    if (destination.droppableId !== "options") {
+      current[destination.droppableId] = draggableId;
+    }
+
+    return {
+      ...prev,
+      [id]: current
+    };
+  });
+};
+
 
   const usedRightItems = Object.values(answer?.[id] || {});
   const availableRightItems = right_items.filter(opt => !usedRightItems.includes(opt));
 
+  // Ограничиваем количество левых
+  const visibleLeftItems = left_items.slice(0, right_items.length);
+
   return (
     <DragDropContext onDragEnd={handleDrop}>
-      <div style={{ display: "flex", gap: "32px", flexWrap: "wrap", marginTop: "16px" }}>
-        {/* Левый столбец с зонами для перетаскивания */}
-        <div>
-          <h4>Match to:</h4>
-          {left_items.map((left, i) => (
-  <div key={i} style={{ marginBottom: 12 }}>
-    <strong>{left}</strong>
-    <Droppable droppableId={left} direction="horizontal">
-      {(provided) => (
-        <div
-          ref={provided.innerRef}
-          {...provided.droppableProps}
-          style={{
-            minWidth: 150,
-            minHeight: 40,
-            border: "1px dashed #ccc",
-            padding: 4,
-            background: "#f9f9f9",
-            marginTop: 4
-          }}
-        >
-          {answer?.[id]?.[left] && (
-            <Draggable
-              draggableId={answer[id][left]}
-              index={0}
-              isDragDisabled={disabled}
-            >
-              {(provided) => (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.draggableProps}
-                  {...provided.dragHandleProps}
-                  style={{
-                    padding: "6px 12px",
-                    background: "#e0f7ff",
-                    borderRadius: 4,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    ...provided.draggableProps.style
-                  }}
-                >
-                  <span>{answer[id][left]}</span>
-                  {/* Здесь появится галочка или крест */}
-                  {disabled && question.correct_matches && (
-                    <span style={{ marginLeft: 8 }}>
-                      {answer[id][left] === question.correct_matches[left]
-                        ? "✅"
-                        : "❌"}
-                    </span>
-                  )}
-                </div>
-              )}
-            </Draggable>
-          )}
-          {provided.placeholder}
-        </div>
-      )}
-    </Droppable>
-  </div>
-))}
+      <div style={{ display: "flex", gap: "32px", marginTop: 16 }}>
+        {/* Левая часть: пары */}
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", fontWeight: "bold", marginBottom: 8 }}>
+            <div style={{ width: "150px" }}>Match to:</div>
+            <div>Answer:</div>
+          </div>
+
+          {visibleLeftItems.map((left, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ width: "150px" }}>
+                <strong>{left}</strong>
+              </div>
+              <Droppable droppableId={left} direction="horizontal">
+                {(provided) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    style={{
+                      minWidth: 180,
+                      minHeight: 40,
+                      border: "1px dashed #ccc",
+                      background: "#f9f9f9",
+                      padding: 4,
+                      display: "flex",
+                      alignItems: "center"
+                    }}
+                  >
+                    {answer?.[id]?.[left] && (
+                      <Draggable
+                        draggableId={answer[id][left]}
+                        index={0}
+                        isDragDisabled={disabled}
+                      >
+                        {(provided) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            style={{
+                              padding: "6px 12px",
+                              background: "#e0f7ff",
+                              borderRadius: 4,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              width: "100%",
+                              ...provided.draggableProps.style
+                            }}
+                          >
+                            <span>{answer[id][left]}</span>
+                            {disabled && question.correct_matches && (
+                              <span style={{ marginLeft: 8 }}>
+                                {answer[id][left] === question.correct_matches[left] ? "✅" : "❌"}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </Draggable>
+                    )}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </div>
+          ))}
         </div>
 
-        {/* Правый столбец со всеми доступными опциями */}
+        {/* Правая часть: Options */}
         <div>
-          <h4>Options:</h4>
+          <div style={{ fontWeight: "bold", marginBottom: 8 }}>Options:</div>
           <Droppable droppableId="options" direction="vertical">
             {(provided) => (
               <div
                 ref={provided.innerRef}
                 {...provided.droppableProps}
                 style={{
-                  minWidth: 150,
+                  width: 180,
+                  minHeight: right_items.length * 48,
                   border: "1px solid #ccc",
                   padding: 8,
                   background: "#fff"
