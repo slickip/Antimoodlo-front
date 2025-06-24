@@ -279,6 +279,13 @@ return (
       return (
         <div key={q.id} style={{ marginBottom: 16 }}>
           <strong>{i + 1}. {q.question}</strong>
+          {q.image && (
+            <img
+              src={q.image}
+              alt=""
+              style={{ maxWidth: 400, margin: "8px 0", borderRadius: 6 }}
+            />
+          )}
           {q.options.map((opt, idx) => {
             const checked = isMultiple
               ? (answers[q.id] || []).includes(idx)
@@ -315,9 +322,20 @@ return (
                   onChange={() => handleChange(q.id, idx, isMultiple)}
                   style={{ marginRight: 8 }}
                 />
-                <span>
-                  {opt}{icon}
-                </span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {/* текст / подпись */}
+                      {typeof opt === "string" ? opt : opt.text}
+                      {/* картинка, если есть */}
+                      {typeof opt !== "string" && opt.image && (
+                        <img
+                          src={opt.image}
+                          alt=""
+                          style={{ maxWidth: 120, borderRadius: 4 }}
+                        />
+                      )}
+                      {/* галочка / крестик после проверки */}
+                      {icon}
+                    </span>
               </label>
             );
           })}
@@ -384,7 +402,8 @@ function ConfigUploadPage() {
     id: 1,
     text: "",
     type: "single",
-    options: ["", ""],
+    options: [{ text: "", image: "" }, { text: "", image: "" }],
+    image: "", // картинка самого вопроса
     correctOption: null,
     correctOptions: [],
     left_items: [""],
@@ -550,11 +569,25 @@ const isDisabled = () => {
   const textEmpty = !currentQuestion.text.trim();
 
   if (currentQuestion.type === "single") {
-    return textEmpty || currentQuestion.correctOption === null || currentQuestion.options.every(opt => !opt.trim());
+    return (
+      textEmpty ||
+      currentQuestion.correctOption === null ||
+      currentQuestion.options.every(o => {
+        const t = typeof o === "string" ? o : o.text;
+        return !t.trim();
+      })
+    );
   }
-
+  
   if (currentQuestion.type === "multiple") {
-    return textEmpty || currentQuestion.correctOptions.length === 0 || currentQuestion.options.every(opt => !opt.trim());
+    return (
+      textEmpty ||
+      currentQuestion.correctOptions.length === 0 ||
+      currentQuestion.options.every(o => {
+        const t = typeof o === "string" ? o : o.text;
+        return !t.trim();
+      })
+    );
   }
 
   if (currentQuestion.type === "matching") {
@@ -679,7 +712,13 @@ const isDisabled = () => {
   } else if (currentQuestion.type === "single") {
     newQuestion = {
       ...base,
-      options: currentQuestion.options.filter(opt => opt.trim() !== ""),
+      image: currentQuestion.image,
+      options: currentQuestion.options
+        .filter(o => {
+          const t = typeof o === "string" ? o : o.text;
+          return t.trim() !== "";
+        })
+        .map(o => (o.image ? o : (typeof o === "string" ? o : o.text))), // объект → объект, чистый текст → строка
       correct_option_index: currentQuestion.correctOption
     }
   } else if (currentQuestion.type === "open") {
@@ -687,12 +726,17 @@ const isDisabled = () => {
     id: questions.length + 1,
     question: currentQuestion.text,
     type: "open",
-    correct_answer_text: currentQuestion.correctAnswerText   // ← поле с текстом
+    correct_answer_text: currentQuestion.correctAnswerText   // поле с текстом
     };
   } else {
     newQuestion = {
       ...base,
-      options: currentQuestion.options.filter(opt => opt.trim() !== ""),
+      options: currentQuestion.options
+        .filter(o => {
+          const t = typeof o === "string" ? o : o.text;
+          return t.trim() !== "";
+        })
+        .map(o => (o.image ? o : (typeof o === "string" ? o : o.text))), // объект → объект, чистый текст → строка
       correct_option_indexes: currentQuestion.correctOptions
     };
   }
@@ -703,7 +747,8 @@ const isDisabled = () => {
     id: questions.length + 2,
     text: "",
     type: "single",
-    options: ["", ""],
+    options: [{ text: "", image: "" }, { text: "", image: "" }],
+    image: "", // картинка самого вопроса
     correctOption: null,
     correctOptions: [],
     left_items: [""],
@@ -714,8 +759,9 @@ const isDisabled = () => {
 
 //обновляет конкретный вариант ответа в массиве options
   const updateOption = (index, value) => {
-    const newOptions = [...currentQuestion.options];
-    newOptions[index] = value;
+    const toObj = (v) => (typeof v === "string" ? { text: v, image: "" } : v);
+    const newOptions = currentQuestion.options.map(toObj);
+    newOptions[index] = toObj(value);
     setCurrentQuestion({...currentQuestion, options: newOptions});
   };
 
@@ -723,7 +769,7 @@ const isDisabled = () => {
   const addOption = () => {
     setCurrentQuestion({
       ...currentQuestion,
-      options: [...currentQuestion.options, ""]
+      options: [...currentQuestion.options, { text: "", image: "" }]
     });
   };
 
@@ -864,7 +910,23 @@ const isDisabled = () => {
       </div>
       <div className="question-container">
         <h3 className="section-title">Add Question</h3>
-        
+        <div className="editor-field">
+        <label className="editor-label">Question Image URL:</label>
+        <input
+          type="text"
+          value={currentQuestion.image || ""}
+          onChange={e =>
+            setCurrentQuestion({ ...currentQuestion, image: e.target.value.trim() })
+          }
+          className="editor-input"
+          placeholder="https://example.com/pic.png"
+        />
+        {currentQuestion.image && (
+          <img src={currentQuestion.image}
+              alt=""
+              style={{ maxHeight: 80, marginTop: 6 }}/>
+        )}
+      </div>
         <div className="editor-field">
           <label className="editor-label">Question Text:</label>
           <input
@@ -994,38 +1056,68 @@ const isDisabled = () => {
 {(currentQuestion.type === "single" || currentQuestion.type === "multiple") && (
   <div className="editor-field">
     <label className="editor-label">Options:</label>
-    {currentQuestion.options.map((option, index) => (
-      <div key={index} className="option-row">
-        <input
-          type={currentQuestion.type === "single" ? "radio" : "checkbox"}
-          name={`correct-answer-${currentQuestion.id}`}
-          checked={
-            currentQuestion.type === "single"
-              ? currentQuestion.correctOption === index
-              : currentQuestion.correctOptions.includes(index)
-          }
-          onChange={(e) => handleCorrectAnswerChange(index, e.target.checked)}
-          className="correct-answer-input"
-        />
-        <input
-          type="text"
-          value={option}
-          onChange={(e) => updateOption(index, e.target.value)}
-          className="option-input"
-          placeholder={`Option ${index + 1}`}
-        />
-        <button 
-          onClick={() => removeOption(index)}
-          className="remove-option-btn"
-        >
-          <FiTrash2 />
-        </button>
-      </div>
-    ))}
-    <button
-      onClick={addOption}
-      className="add-option-btn"
-    >
+
+    {currentQuestion.options.map((opt, index) => {
+      const o = typeof opt === "string" ? { text: opt, image: "" } : opt;
+
+      return (
+        <div key={index} className="option-row">
+          {/* чек-бокс / радио для правильного ответа */}
+          <input
+            type={currentQuestion.type === "single" ? "radio" : "checkbox"}
+            name={`correct-${currentQuestion.id}`}
+            checked={
+              currentQuestion.type === "single"
+                ? currentQuestion.correctOption === index
+                : currentQuestion.correctOptions.includes(index)
+            }
+            onChange={(e) => handleCorrectAnswerChange(index, e.target.checked)}
+            className="correct-answer-input"
+          />
+
+          {/* текст */}
+          <input
+            type="text"
+            value={o.text}
+            onChange={(e) =>
+              updateOption(index, { ...o, text: e.target.value })
+            }
+            className="option-input"
+            placeholder={`Option ${index + 1}`}
+          />
+
+          {/* URL картинки */}
+          <input
+            type="text"
+            value={o.image || ""}
+            onChange={e =>
+              updateOption(index, { ...o, image: e.target.value.trim() })
+            }
+            className="option-input"
+            style={{ marginLeft: 6, flex: "1 1 220px" }}
+            placeholder="Image URL (optional)"
+          />
+
+          {/* превью */}
+          {o.image && (
+            <img
+              src={o.image}
+              alt=""
+              style={{ maxHeight: 50, marginLeft: 6 }}
+            />
+          )}
+
+          <button
+            onClick={() => removeOption(index)}
+            className="remove-option-btn"
+          >
+            <FiTrash2 />
+          </button>
+        </div>
+      );
+    })}
+
+    <button onClick={addOption} className="add-option-btn">
       <FiPlus size={16} /> Add Option
     </button>
   </div>
