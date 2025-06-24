@@ -293,14 +293,15 @@ return (
             const isWrongSelected = wasAnswered && checked && !isCorrect;
 
             const icon = wasAnswered
-              ? isCorrect && checked
-                ? " ✅"
-                : isCorrect && !isMultiple
-                  ? " ✅"
-                  : isWrongSelected
-                    ? " ❌"
-                    : ""
-              : "";
+            ? isCorrect && checked
+              ? " ✅"                    //правильный и выбран — зелёный
+              : isCorrect && !checked
+                ? " ☑️"                  //правильный, но НЕ выбран — серый
+              : isWrongSelected
+                ? " ❌"                  //выбранный, но неправильный — красный
+              : ""
+            : "";
+
 
             return (
               <label
@@ -1294,7 +1295,7 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
           value={yamlText}
           onChange={handleYamlChange}
           className="yaml-textarea" //штука чтоб высвечивалась в конструкторе yaml файла
-          placeholder="QUIZ EXAMPLE:
+          placeholder="QUIZ EXAMPLE: 
 quiz:
   title: Example quiz (Please write the title on English) \n
   duration: 120
