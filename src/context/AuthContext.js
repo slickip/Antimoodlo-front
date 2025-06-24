@@ -14,10 +14,11 @@ export const AuthProvider = ({ children }) => {
   });
 
   useEffect(() => {
-    if (user) {
+    // Только если зашли "вручную" на / (т.е. на корень)
+    if (user && window.location.pathname === "/") {
       const role = user.userrole;
-      if (role === 1)       navigate("/student");
-      else if (role === 2|| role === 3) navigate("/upload");
+      if (role === 1) navigate("/student");
+      else if (role === 2 || role === 3) navigate("/upload");
     }
   }, [user, navigate]);
 

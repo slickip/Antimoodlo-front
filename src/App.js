@@ -2,7 +2,8 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import ConfigUploadPage from "./pages/ConfigUploadPage";
-import StudentPage from "./pages/StudetPage";     // добавь это
+import StudentPage from "./pages/StudetPage";    
+import QuizPage    from "./pages/QuizPage"; // добавь это
 import { AuthProvider } from "./context/AuthContext";
 import PrivateRoute from "./components/PrivateRoute";
 
@@ -19,6 +20,15 @@ function App() {
           element={
             <PrivateRoute>
               <ConfigUploadPage />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/student/quiz/:quizId"
+          element={
+            <PrivateRoute>
+              <QuizPage />
             </PrivateRoute>
           }
         />

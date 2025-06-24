@@ -78,9 +78,12 @@ export default {
     submited_date: new Date().toISOString()
   };
   return api.post('/quizzes', payload);
-}
-,
+},
   
+  getAllAnswers(questionId) {
+    return api.get(`/questions/${questionId}/answers`);
+  },
+
   updateQuiz(id, quizData) {
     const transformedData = transformQuizData(quizData);
     return api.put(`/quizzes/${id}`, transformedData);
@@ -279,52 +282,64 @@ export default {
 
   for (const q of questionsRes.data) {
     const questionId = q.id;
-    const optionsRes = await api.get(`/questions/${questionId}/options`);
-    const correctRes = await api.get(`/questions/${questionId}/answers/correct`);
+
+    const detailRes = await api.get(`/questions/${questionId}/answers`);
+      const {
+        options,
+        correctAnswers,
+        matchPairs,
+        openAnswers
+      } = detailRes.data;
 
     // matching: correct answers come as pairs
     const isMatching = q.questiontypeid === 3;
     const isOpen = q.questiontypeid === 4;
 
-    let question = {
-      id: questionId,
-      question: q.questiontext,
-      type:
-        q.questiontypeid === 1
-          ? 'single'
-          : q.questiontypeid === 2
-          ? 'multiple'
-          : q.questiontypeid === 3
-          ? 'matching'
-          : 'open',
-      options: !isMatching && !isOpen ? optionsRes.data.map(opt => opt.optiontext) : undefined,
-      left_items: isMatching
-        ? optionsRes.data.filter(opt => opt.column === 'left').map(opt => opt.optiontext)
-        : undefined,
-      right_items: isMatching
-        ? optionsRes.data.filter(opt => opt.column === 'right').map(opt => opt.optiontext)
-        : undefined,
-      correct_option_index:
-        q.questiontypeid === 1 ? correctRes.data[0]?.optionid : undefined,
-      correct_option_indexes:
-        q.questiontypeid === 2 ? correctRes.data.map(a => a.optionid) : undefined,
-      correct_matches: isMatching
-        ? Object.fromEntries(correctRes.data.map(a => [a.lefttext, a.righttext]))
-        : undefined,
-    };
+          // 1) Определяем тип вопроса:
+          // теперь, сразу после распаковки, вставьте этот код:
+    // 1) Определяем тип
+    let type = "single";
+    if      (matchPairs.length)         type = "matching";
+    else if (openAnswers.length)        type = "open";
+    else if (correctAnswers.length > 1) type = "multiple";
 
-    // Добавляем open-answer
-    if (isOpen) {
-      try {
-        const openRes = await api.get(`/questions/${questionId}/answers/correct`);
-        const openText = openRes.data.openAnswers?.[0]?.answertext || '';
-        question.correct_answer_text = openText;
-      } catch (err) {
-        console.warn(`Не удалось загрузить open-ответ для вопроса ${questionId}`, err);
-        question.correct_answer_text = '';
-      }
+    // 2) Список текстов вариантов
+    const optionTexts = options.map(o => o.optiontext);
+
+    // 3) Вычисляем правильные индексы
+    let correctIndex;
+    let correctIndexes = [];
+    if (type === "single") {
+      const oid = correctAnswers[0]?.optionid;
+      correctIndex = options.findIndex(o => o.id === oid);
+    } else if (type === "multiple") {
+      correctIndexes = correctAnswers
+        .map(ca => ca.optionid)
+        .map(oid => options.findIndex(o => o.id === oid))
+        .filter(i => i !== -1)
+        .sort();
     }
 
+    // 4) Для matching — строим объект { left: right }
+    const correctMatches = matchPairs.reduce((acc, m) => {
+      acc[m.lefttext] = m.righttext;
+      return acc;
+    }, {});
+
+    // 5) Для open — текст ответа
+    const correctAnswerText = openAnswers[0]?.answertext || "";
+
+    // 6) Собираем готовый вопрос:
+    const question = {
+      id:       questionId,
+      question: q.questiontext,
+      type,
+      ...(type !== "matching" && type !== "open" && { options: optionTexts }),
+      ...(type === "single"   && { correct_option_index:   correctIndex }),
+      ...(type === "multiple" && { correct_option_indexes: correctIndexes }),
+      ...(type === "matching" && { correct_matches: correctMatches }),
+      ...(type === "open"     && { correct_answer_text:    correctAnswerText })
+    };
     questions.push(question);
   }
 

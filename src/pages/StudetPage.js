@@ -1,28 +1,71 @@
-import React from "react";
+
 import { useAuth } from "../context/AuthContext";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "../services/Api";
+import Sidebar from "../components/Sidebar";
+import "../styles/ConfigUploadPage.css"; 
+
 
 function StudentPage() {
+  const [sidebarWidth, setSidebarWidth] = useState(60);
+  const [quizzes, setQuizzes]         = useState([]);
+  const [isLoading, setIsLoading]     = useState(true);
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  return (
-    <div style={{ padding: "24px" }}>
-      <h1>Добро пожаловать, {user?.userlogin}!</h1>
-      <p>Ваша роль: {user?.userrole === 1 ? "Студент" : "Преподаватель"}</p>
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setIsLoading(true);
+        const res = await api.getQuizzes();
+        setQuizzes(res.data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, []);
 
-      <button onClick={logout} style={{
-        marginTop: "20px",
-        padding: "10px 20px",
-        fontSize: "16px",
-        backgroundColor: "#c0392b",
-        color: "white",
-        border: "none",
-        borderRadius: "4px",
-        cursor: "pointer"
-      }}>
-        Выйти из аккаунта
+  return (
+  <div className="quiz-creator-container">
+    <Sidebar width={sidebarWidth} setWidth={setSidebarWidth} />
+
+    <div className="main-content" style={{ marginLeft: sidebarWidth }}>
+      <div className="header-container">
+        <h1 className="page-title">Добро пожаловать, {user?.userlogin}!</h1>
+      </div>
+
+      {/* Список квизов */}
+      {isLoading ? (
+        <p>Загрузка квизов…</p>
+      ) : quizzes.length === 0 ? (
+        <p>Пока нет доступных квизов</p>
+      ) : (
+        <div className="quizzes-list">
+          {quizzes.map(q => (
+            <div key={q.id} className="quiz-item">
+              <h3 className="quiz-title">{q.title}</h3>
+              <p className="quiz-description">{q.description}</p>
+              <button
+                className="action-btn start-quiz-btn"
+                onClick={() => navigate(`/student/quiz/${q.id}`)}
+              >
+                Начать квиз
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <button onClick={logout} className="action-btn logout-btn">
+        Выйти
       </button>
     </div>
-  );
+  </div>
+);
 }
 
 export default StudentPage;
