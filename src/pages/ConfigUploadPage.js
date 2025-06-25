@@ -103,6 +103,7 @@ function ConfigUploadPage() {
     id: 1,
     text: "",
     type: "single",
+    points: 1,
     options: [{ text: "", image: "" }, { text: "", image: "" }],
     image: "", // картинка самого вопроса
     correctOption: null,
@@ -409,7 +410,8 @@ const saveQuiz = async () => {
       ...base,
       left_items: currentQuestion.left_items.filter(item => item.trim() !== ""),
       right_items: currentQuestion.right_items.filter(item => item.trim() !== ""),
-      correct_matches: currentQuestion.correct_matches
+      correct_matches: currentQuestion.correct_matches,
+      points: currentQuestion.points 
     };
   } else if (currentQuestion.type === "single") {
     newQuestion = {
@@ -421,14 +423,16 @@ const saveQuiz = async () => {
           return t.trim() !== "";
         })
         .map(o => (o.image ? o : (typeof o === "string" ? o : o.text))), // объект → объект, чистый текст → строка
-      correct_option_index: currentQuestion.correctOption
+      correct_option_index: currentQuestion.correctOption,
+      points: currentQuestion.points 
     }
   } else if (currentQuestion.type === "open") {
     newQuestion = {
     id: questions.length + 1,
     question: currentQuestion.text,
     type: "open",
-    correct_answer_text: currentQuestion.correctAnswerText   // поле с текстом
+    correct_answer_text: currentQuestion.correctAnswerText,
+    points: currentQuestion.points  
     };
   } else {
     newQuestion = {
@@ -439,7 +443,8 @@ const saveQuiz = async () => {
           return t.trim() !== "";
         })
         .map(o => (o.image ? o : (typeof o === "string" ? o : o.text))), // объект → объект, чистый текст → строка
-      correct_option_indexes: currentQuestion.correctOptions
+      correct_option_indexes: currentQuestion.correctOptions,
+      points: currentQuestion.points 
     };
   }
 
@@ -637,6 +642,20 @@ const saveQuiz = async () => {
             onChange={(e) => setCurrentQuestion({...currentQuestion, text: e.target.value})}
             className="editor-input"
             placeholder="Enter your question"
+          />
+        </div>
+
+        <div className="editor-field">
+          <label className="editor-label">Points:</label>
+          <input
+            type="number"
+            min="1"
+            value={currentQuestion.points}
+            onChange={e => setCurrentQuestion({
+              ...currentQuestion,
+              points: Number(e.target.value)
+            })}
+            className="editor-input"
           />
         </div>
 

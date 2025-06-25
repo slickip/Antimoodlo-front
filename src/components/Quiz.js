@@ -3,6 +3,7 @@ import Timer from "./Timer";
 import MatchingQuestion from "./MatchingQuestions";
 import { FiX, FiCheck } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 // Преобразует ISO-строку в Date с учётом Москвы
 function parseMoscow(iso) {
@@ -32,6 +33,7 @@ function Quiz({ quizConfig }) {
   //флаг, указывающий на вышедшее время
   const [isTimeUp, setIsTimeUp]   = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   //база квиза
   const { start, end, title, description, questions, duration } = quizConfig.quiz;
@@ -45,35 +47,36 @@ function Quiz({ quizConfig }) {
   
   //compareResult() подсчитывает количество правильных ответов
  const computeResult = () => {
-  let correctCount = 0;
+  let totalPoints = 0;
+  let earnedPoints = 0;
 
   questions.forEach(q => {
+    const pts = q.points || 1; // по умолчанию 1 балл
     const given = answers[q.id];
+
+    let isCorrect = false;
+
     if (q.type === "single") {
-      if (given === q.correct_option_index) {
-        correctCount++;
-      }
+      isCorrect = given === q.correct_option_index;
     } else if (q.type === "matching") {
       const givenMatching = answers[q.id] || {};
       const correct = q.correct_matches;
-      const allMatched = Object.keys(correct).every(k => givenMatching[k] === correct[k]);
-      if (allMatched) {
-        correctCount++;
-      }
+      isCorrect = Object.keys(correct).every(k => givenMatching[k] === correct[k]);
     } else if (q.type === "multiple") {
       const a = Array.isArray(given) ? given.slice().sort().toString() : "";
-const b = Array.isArray(q.correct_option_indexes) ? q.correct_option_indexes.slice().sort().toString() : "";
-if (a === b) correctCount++;
+      const b = Array.isArray(q.correct_option_indexes) ? q.correct_option_indexes.slice().sort().toString() : "";
+      isCorrect = a === b;
     } else if (q.type === "open") {
       const givenText = (given || "").trim().toLowerCase();
       const correctText = (q.correct_answer_text || "").trim().toLowerCase();
-      if (givenText === correctText) {
-        correctCount++;
-      }
+      isCorrect = givenText === correctText;
     }
+
+    totalPoints += pts;
+    if (isCorrect) earnedPoints += pts;
   });
 
-  setResult(`✅ Correct: ${correctCount} out of ${questions.length}`);
+  setResult(`✅ Score: ${earnedPoints} / ${totalPoints} points`);
 };
 
 
@@ -155,7 +158,13 @@ return (
       if (q.type === "matching") {
         return (
           <div key={q.id} style={{ marginBottom: 24 }}>
-            <strong>{i + 1}. {q.question}</strong>
+            <strong>
+              {i + 1}. {q.question}{" "}
+              <span style={{ fontWeight: "normal", fontSize: 14 }}>
+                ({q.points || 1} балл{(q.points || 1) !== 1 ? "ов" : ""})
+              </span>
+            </strong>
+
             <MatchingQuestion
               question={q}
               answer={answers}
@@ -284,23 +293,23 @@ return (
       </button>
     )}
 
-    {result && (
-        <button
-            onClick={() => navigate("/student")}
-            style={{
-                marginTop: 24,
-                padding: "10px 20px",
-                fontSize: "16px",
-                borderRadius: "6px",
-                backgroundColor: "#007bff",
-                color: "white",
-                border: "none",
-                cursor: "pointer"
-            }}
-        >
-            Закрыть квиз
-        </button>
-        )}
+    {result && user?.userrole === 1 && (
+      <button
+        onClick={() => navigate("/student")}
+        style={{
+          marginTop: 24,
+          padding: "10px 20px",
+          fontSize: "16px",
+          borderRadius: "6px",
+          backgroundColor: "#007bff",
+          color: "white",
+          border: "none",
+          cursor: "pointer"
+        }}
+      >
+        Закрыть квиз
+      </button>
+    )}
 
   </div>
 );

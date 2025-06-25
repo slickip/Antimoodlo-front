@@ -187,7 +187,7 @@ export default {
       questiontypeid: questionTypeMap[q.type],
       quizid:         quizId,
       imageurl:       q.image  || undefined,
-      points:         0
+      points:         q.points || 1
     });
     const questionId = questionRes.data.id;
 
@@ -318,6 +318,7 @@ export default {
       id:       questionId,
       question: q.questiontext,
       type,
+      points:   q.points || 1,
       ...(type !== "matching" && type !== "open" && { options: optionTexts }),
       ...(type === "single"   && { correct_option_index:   correctIndex }),
       ...(type === "multiple" && { correct_option_indexes: correctIndexes }),
