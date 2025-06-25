@@ -917,39 +917,41 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
     // a) метаданные квиза
     const { data: quizData } = await api.getQuiz(quizMeta.id);
 
-    // b) вопросы
+    // b) список вопросов
     const { data: questionsList } = await api.getQuestions(quizMeta.id);
 
-    // c) для каждого вопроса — все ответы
+    // c) получение деталей по каждому вопросу
     const questions = await Promise.all(
-      questionsList.map(async q => {
+      questionsList.map(async (q) => {
         const { data: ans } = await api.getAllAnswers(q.id);
-        const type = q.questiontypeid === 1
-          ? 'single'
-          : q.questiontypeid === 2
-            ? 'multiple'
-            : 'matching';
 
-        if (type === 'single') {
-          // варианты + индекс правильного
-          const options = ans.options.map(o => o.optiontext);
-          const correct = ans.correctAnswers[0]?.optionid;
+        let type;
+        if      (q.questiontypeid === 1) type = "single";
+        else if (q.questiontypeid === 2) type = "multiple";
+        else if (q.questiontypeid === 3) type = "open";
+        else if (q.questiontypeid === 4) type = "matching";
+        else                             type = "single";
+
+        if (type === "single") {
+          const options = ans.options.map((o) => o.optiontext);
+          const correctOid = ans.correctAnswers[0]?.optionid;
+          const correctIndex = options.findIndex((_, i) => ans.options[i].id === correctOid);
           return {
             id: q.id,
             question: q.questiontext,
             type,
             options,
-            correct_option_index: correct != null
-              ? options.findIndex((_, i) => ans.correctAnswers[0].optionid === ans.options?.[i]?.id)
-              : undefined
+            correct_option_index: correctIndex >= 0 ? correctIndex : undefined
           };
         }
 
-        if (type === 'multiple') {
-          const options = ans.options.map(o => o.optiontext);
-          const correctIndexes = ans.correctAnswers.map(ca =>
-            options.findIndex((_, i) => ca.optionid === ans.options[i].id)
-          );
+        if (type === "multiple") {
+          const options = ans.options.map((o) => o.optiontext);
+          const correctIndexes = ans.correctAnswers
+            .map((ca) => ca.optionid)
+            .map((oid) => ans.options.findIndex((o) => o.id === oid))
+            .filter((i) => i >= 0)
+            .sort();
           return {
             id: q.id,
             question: q.questiontext,
@@ -959,36 +961,60 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
           };
         }
 
-        // matching
-        const left_items  = ans.options.filter(o => !ans.matchPairs.find(mp => mp.righttext === o.optiontext)).map(o => o.optiontext);
-        const right_items = ans.options.filter(o => !left_items.includes(o.optiontext)).map(o => o.optiontext);
-        const correct_matches = Object.fromEntries(
-          ans.matchPairs.map(mp => [mp.lefttext, mp.righttext])
-        );
+        if (type === "open") {
+          return {
+            id: q.id,
+            question: q.questiontext,
+            type,
+            correct_answer_text: ans.openAnswers[0]?.answertext || ""
+          };
+        }
+
+        if (type === "matching") {
+          const left_items = ans.options
+            .filter((o) => !ans.matchPairs.some((mp) => mp.righttext === o.optiontext))
+            .map((o) => o.optiontext);
+
+          const right_items = ans.options
+            .filter((o) => ans.matchPairs.some((mp) => mp.righttext === o.optiontext))
+            .map((o) => o.optiontext);
+
+          const correct_matches = Object.fromEntries(
+            ans.matchPairs.map((mp) => [mp.lefttext, mp.righttext])
+          );
+
+          return {
+            id: q.id,
+            question: q.questiontext,
+            type,
+            left_items,
+            right_items,
+            correct_matches
+          };
+        }
+
         return {
           id: q.id,
           question: q.questiontext,
-          type,
-          left_items,
-          right_items,
-          correct_matches
+          type: "single",
+          options: ans.options.map((o) => o.optiontext),
+          correct_option_index: undefined
         };
       })
     );
 
-    // d) Собираем объект для модалки и открываем
+    // d) Открываем превью
     setQuizConfig({
       quiz: {
-        title:       quizData.title,
+        title: quizData.title,
         description: quizData.description,
-        start:       quizData.startdate,
-        end:         quizData.enddate,
-        duration:    quizData.duration,
+        start: quizData.startdate,
+        end: quizData.enddate,
+        duration: quizData.duration,
         questions
       }
     });
     setShowModal(true);
-
   } catch (err) {
     console.error("Ошибка при загрузке превью квиза:", err);
     alert("Не удалось загрузить превью теста из базы");
@@ -996,6 +1022,7 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
     setIsLoading(false);
   }
 };
+
 
 const yamlExample = `QUIZ EXAMPLE:
 quiz:

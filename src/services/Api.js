@@ -174,7 +174,7 @@ export default {
 
 //console.log('Создан квиз с ID:', quizRes.data.id);
 
-  const questionTypeMap = { single: 1, multiple: 2, matching: 3, open: 4 };
+  const questionTypeMap = { single: 1, multiple: 2, matching: 4, open: 3 };
 
     const quizId = quizRes.data.id;
     //console.log('Создан квиз с ID:', quizId);
