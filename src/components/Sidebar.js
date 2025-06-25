@@ -1,16 +1,17 @@
+// components/Sidebar.js
 import React from "react";
-import { useAuth } from "../context/AuthContext";
 import { FiLogOut, FiUpload, FiEye } from "react-icons/fi";
+import { useAuth } from "../context/AuthContext";
 
-function Sidebar() {
+function Sidebar({ width = 60, setWidth, onNavigate }) {
   const { logout } = useAuth();
 
   const sidebarStyle = {
     height: "100vh",
-    width: "60px",
-    backgroundColor: "rgba(1, 5, 40, 0.8)", // #010528 с прозрачностью 0.8
+    width,                               // ← получаем из пропса
+    backgroundColor: "rgba(1, 5, 40, 0.8)",
     color: "#fff",
-    transition: "width 0.3s ease, background-color 0.3s ease",
+    transition: "width 0.3s ease",
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
@@ -22,20 +23,29 @@ function Sidebar() {
     overflow: "hidden",
   };
 
-  const sectionStyle = {
-    padding: "20px 10px",
-  };
+  const sectionStyle = { padding: "20px 10px" };
+
+  /* ————————— helpers ————————— */
+  const open  = () => setWidth?.(200);
+  const close = () => setWidth?.(60);
 
   return (
-    <div
-      style={sidebarStyle}
-      onMouseEnter={(e) => (e.currentTarget.style.width = "200px")}
-      onMouseLeave={(e) => (e.currentTarget.style.width = "60px")}
-    >
+    <div style={sidebarStyle} onMouseEnter={open} onMouseLeave={close}>
+      {/* верхний блок */}
       <div style={sectionStyle}>
-        <SidebarItem icon={<FiUpload />} label="Upload" />
-        <SidebarItem icon={<FiEye />} label="Quizzes" />
+        <SidebarItem
+          icon={<FiUpload />}
+          label="Upload"
+          onClick={() => onNavigate?.("upload")}
+        />
+        <SidebarItem
+          icon={<FiEye />}
+          label="Quizzes"
+          onClick={() => onNavigate?.("saved")}
+        />
       </div>
+
+      {/* выход */}
       <div style={sectionStyle}>
         <SidebarItem icon={<FiLogOut />} label="Logout" onClick={logout} />
       </div>
@@ -43,6 +53,7 @@ function Sidebar() {
   );
 }
 
+/* один пункт меню */
 function SidebarItem({ icon, label, onClick }) {
   const itemStyle = {
     display: "flex",
@@ -52,44 +63,30 @@ function SidebarItem({ icon, label, onClick }) {
     cursor: "pointer",
     marginBottom: "10px",
     transition: "background 0.2s ease",
-    color: "#fff", // текст белый
+    color: "#fff",
   };
 
   const iconStyle = {
-    fontSize: "20px",
-    marginRight: "12px",
-    minWidth: "24px",
+    fontSize: 20,
+    marginRight: 12,
+    minWidth: 24,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#fff", // иконки белые
   };
 
   const labelStyle = {
     whiteSpace: "nowrap",
     overflow: "hidden",
-    opacity: 0,
-    transition: "opacity 0.3s ease",
-  };
-
-  const handleMouseEnter = (e) => {
-    e.currentTarget.style.background = "#010528"; // фон при ховере полностью непрозрачный
-    const labelSpan = e.currentTarget.querySelector("span");
-    if (labelSpan) labelSpan.style.opacity = 1;
-  };
-
-  const handleMouseLeave = (e) => {
-    e.currentTarget.style.background = "transparent"; // возвращаем прозрачность
-    const labelSpan = e.currentTarget.querySelector("span");
-    if (labelSpan) labelSpan.style.opacity = 0;
+    /* подпись всегда видна */
   };
 
   return (
     <div
       style={itemStyle}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
       onClick={onClick}
+      onMouseEnter={e => (e.currentTarget.style.background = "#010528")}
+      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
     >
       <div style={iconStyle}>{icon}</div>
       <span style={labelStyle}>{label}</span>

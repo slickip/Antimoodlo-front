@@ -36,21 +36,6 @@ function getNowMoscow() {
   return new Date(nowLocal.getTime() + deltaMs);
 }
 
-//кнопки на сайдбаре
-function SidebarItem({ icon, label, onClick }) {
-  return (
-      <div
-     className="sidebar-item"
-     onClick={onClick}
-     onMouseEnter={e => e.currentTarget.style.background = "#010528"}
-     onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-   >
-    <div className="sidebar-icon">{icon}</div>
-    <span className="sidebar-label" style={{ opacity: 1 }}>{label}</span>
-    </div>
-  );
-}
-
 //вроде как окно, открывающееся при просмотре превью квиза
 function QuizModal({ visible, onClose, quizConfig }) {
   if (!visible) return null; //чтобы окно не высвечивалось когда не надо 
@@ -1215,7 +1200,7 @@ quiz:
 
   return (
     <div className="quiz-creator-container">
-      <Sidebar width={sidebarWidth} setWidth={setSidebarWidth} />
+      <Sidebar width={sidebarWidth} setWidth={setSidebarWidth} onNavigate={setActiveTab}/>
       
       <div className="main-content" style={{ marginLeft: sidebarWidth }}>
         <div className="header-container">
