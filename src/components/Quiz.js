@@ -293,7 +293,7 @@ return (
       </button>
     )}
 
-    {result && user?.userrole === 1 && (
+    {result && !!user?.userrole && user.userrole === 1 && (
       <button
         onClick={() => navigate("/student")}
         style={{

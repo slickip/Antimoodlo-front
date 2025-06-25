@@ -330,7 +330,7 @@ const saveQuiz = async () => {
 
   try {
     setIsLoading(true);
-
+    console.log("🚀 Questions перед сохранением:", questions);
     await api.saveQuizToServer({
       quizTitle,                    // строка
       description: quizDescription, // строка (может быть пустой)
@@ -464,6 +464,7 @@ const saveQuiz = async () => {
     id: questions.length + 2,
     text: "",
     type: "single",
+    points: 1,
     options: [{ text: "", image: "" }, { text: "", image: "" }],
     image: "", // картинка самого вопроса
     correctOption: null,
@@ -663,7 +664,7 @@ const saveQuiz = async () => {
             value={currentQuestion.points}
             onChange={e => setCurrentQuestion({
               ...currentQuestion,
-              points: Number(e.target.value)
+              points: Math.max(1, Number(e.target.value))
             })}
             className="editor-input"
           />
@@ -943,7 +944,8 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
             question: q.questiontext,
             type,
             options,
-            correct_option_index: correctIndex >= 0 ? correctIndex : undefined
+            correct_option_index: correctIndex >= 0 ? correctIndex : undefined,
+            points: q.points
           };
         }
 
@@ -959,7 +961,8 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
             question: q.questiontext,
             type,
             options,
-            correct_option_indexes: correctIndexes
+            correct_option_indexes: correctIndexes,
+            points: q.points
           };
         }
 
@@ -968,7 +971,8 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
             id: q.id,
             question: q.questiontext,
             type,
-            correct_answer_text: ans.openAnswers[0]?.answertext || ""
+            correct_answer_text: ans.openAnswers[0]?.answertext || "",
+            points: q.points
           };
         }
 
@@ -991,7 +995,8 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
             type,
             left_items,
             right_items,
-            correct_matches
+            correct_matches,
+            points: q.points
           };
         }
 
@@ -1000,7 +1005,8 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
           question: q.questiontext,
           type: "single",
           options: ans.options.map((o) => o.optiontext),
-          correct_option_index: undefined
+          correct_option_index: undefined,
+          points: q.points
         };
       })
     );

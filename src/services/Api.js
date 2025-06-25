@@ -179,16 +179,18 @@ export default {
     const quizId = quizRes.data.id;
     //console.log('Создан квиз с ID:', quizId);
 
-    
-     for (const q of questions) {
+    console.log("🚀 saveQuizToServer — questions array:", questions);
+
+    for (const q of questions) {
+      console.log(`🔹 Posting question id=${q.id}, text="${q.question}", points=`, q.points);
     // создаём вопрос
-    const questionRes = await api.post(`/quizzes/${quizId}/questions`, {
-      questiontext:   q.question,
-      questiontypeid: questionTypeMap[q.type],
-      quizid:         quizId,
-      imageurl:       q.image  || undefined,
-      points:         q.points || 1
-    });
+      const questionRes = await api.post(`/quizzes/${quizId}/questions`, {
+        questiontext:   q.question,
+        questiontypeid: questionTypeMap[q.type],
+        quizid:         quizId,
+        imageurl:       q.image  || undefined,
+        points:         q.points
+      });
     const questionId = questionRes.data.id;
 
     // 3️⃣ Если matching — создаём left/right опции + пары
@@ -304,11 +306,13 @@ export default {
         .sort();
     }
 
-    // 4) Для matching — строим объект { left: right }
     const correctMatches = matchPairs.reduce((acc, m) => {
       acc[m.lefttext] = m.righttext;
       return acc;
     }, {});
+
+    const leftItems = Object.keys(correctMatches);
+    const rightItems = Object.values(correctMatches);
 
     // 5) Для open — текст ответа
     const correctAnswerText = openAnswers[0]?.answertext || "";
@@ -318,11 +322,15 @@ export default {
       id:       questionId,
       question: q.questiontext,
       type,
-      points:   q.points || 1,
+      points: q.points,
       ...(type !== "matching" && type !== "open" && { options: optionTexts }),
       ...(type === "single"   && { correct_option_index:   correctIndex }),
       ...(type === "multiple" && { correct_option_indexes: correctIndexes }),
-      ...(type === "matching" && { correct_matches: correctMatches }),
+      ...(type === "matching" && {
+        correct_matches: correctMatches,
+        left_items: leftItems,
+        right_items: rightItems
+      }),
       ...(type === "open"     && { correct_answer_text:    correctAnswerText })
     };
     questions.push(question);
@@ -332,6 +340,8 @@ export default {
     id: quiz.id,
     title: quiz.title,
     description: quiz.description,
+    start:       quiz.startdate,
+    end:         quiz.enddate,
     duration: quiz.duration,
     questions
   };
