@@ -147,7 +147,7 @@ export default {
   },
   
   async saveQuizToServer(quizData) {
-    const { quizTitle, questions, duration } = quizData;
+    const { quizTitle, questions, duration, userId, description } = quizData;
 //     console.log("Сохраняем квиз:", quizTitle);
 // console.log("👉 Отправляем на сервер:", {
 //   title:        quizTitle,
@@ -160,117 +160,101 @@ export default {
 // });
 
   const quizRes = await api.post('/quizzes', {
-  title:     quizTitle,
-  courseid: 1,                      
+  courseid: 1,
+  description: description,
   duration:  duration,               
   maxgrade:  100,                    
   stateid:   1,                      
   startdate: new Date().toISOString(), 
-  enddate:  end.toISOString() 
-});
+  enddate:  end.toISOString(),
+  title:     quizTitle,
+  userid : userId
+}); 
 
 
 //console.log('Создан квиз с ID:', quizRes.data.id);
 
-  const questionTypeMap = {
-    single:   1,
-    multiple: 2,
-    matching: 3,
-    open:     3
-  };
+  const questionTypeMap = { single: 1, multiple: 2, matching: 3, open: 4 };
 
     const quizId = quizRes.data.id;
     //console.log('Создан квиз с ID:', quizId);
 
     
-    for (const q of questions) {
-      console.log("📤 Creating question:", {
-  text: q.question,
-  type: q.type,
-  typeId: questionTypeMap[q.type]
-});
+     for (const q of questions) {
+    // создаём вопрос
+    const questionRes = await api.post(`/quizzes/${quizId}/questions`, {
+      questiontext:   q.question,
+      questiontypeid: questionTypeMap[q.type],
+      quizid:         quizId,
+      imageurl:       q.image  || undefined,
+      points:         0
+    });
+    const questionId = questionRes.data.id;
 
-  const questionRes = await api.post(`/quizzes/${quizId}/questions`, {
-    questiontext: q.question,
-    questiontypeid: questionTypeMap[q.type],
-    quizid: quizId
-  });
-  const questionId = questionRes.data.id;
-  console.log('Добавлен вопрос:', questionRes.data);
-
-  if (q.type === 'matching') {
-    const { left_items, right_items, correct_matches } = q;
-
-    for (const leftItem of left_items) {
-      await api.post(`/questions/${questionId}/options`, {
-        optiontext: leftItem,
-        questionid: questionId,
-        column: 'left'
-      });
+    // 3️⃣ Если matching — создаём left/right опции + пары
+    if (q.type === 'matching') {
+      for (const left of q.left_items) {
+        await api.post(`/questions/${questionId}/options`, {
+          optiontext: left,
+          questionid: questionId,
+          column:     'left'
+        });
+      }
+      for (const right of q.right_items) {
+        await api.post(`/questions/${questionId}/options`, {
+          optiontext: right,
+          questionid: questionId,
+          column:     'right'
+        });
+      }
+      for (const [L, R] of Object.entries(q.correct_matches)) {
+        await api.post(`/questions/${questionId}/answers/match`, {
+          lefttext:   L,
+          righttext:  R,
+          questionid: questionId
+        });
+      }
+      continue;
     }
 
-  if (q.type === 'open' && q.correct_answer_text) {
-    await api.post(`/questions/${questionId}/answers/open`, {
-      answertext: q.correct_answer_text,
-      questionid: questionId
-    });
-    continue;
-   } 
-
-    for (const rightItem of right_items) {
-      await api.post(`/questions/${questionId}/options`, {
-        optiontext: rightItem,
-        questionid: questionId,
-        column: 'right'
+    // 4️⃣ Если open — создаём open-ответ
+    if (q.type === 'open') {
+      await api.post(`/questions/${questionId}/answers/open`, {
+        answertext: q.correct_answer_text,
+        questionid: questionId
       });
+      continue;
     }
 
-   for (const [left, right] of Object.entries(correct_matches)) {
-  await api.post(`/questions/${questionId}/answers/match`, {
-    id: 0,
-    lefttext: left,
-    righttext: right,
-    questionid: questionId
-  });
-}
+    // 5️⃣ Обычные опции для single/multiple
+    const optionIds = [];
+    for (const txt of q.options) {
+      const optRes = await api.post(`/questions/${questionId}/options`, {
+        optiontext: txt,
+        questionid: questionId
+      });
+      optionIds.push(optRes.data.id);
+    }
 
-
-
-    continue;
-  }
-
-  if (q.type !== 'open') {
-  const optionIds = [];
-  for (const optText of q.options) {
-    const optRes = await api.post(`/questions/${questionId}/options`, {
-      optiontext: optText,
-      questionid: questionId
-    });
-    optionIds.push(optRes.data.id);
-  }
-
-  if (q.type === 'single' && q.correct_option_index != null) {
-    await api.post(`/questions/${questionId}/answers/correct`, {
-      optionid: optionIds[q.correct_option_index],
-      questionid: questionId
-    });
-  }
-
-  if (q.type === 'multiple' && Array.isArray(q.correct_option_indexes)) {
-    for (const idx of q.correct_option_indexes) {
+    // 6️⃣ Правильные ответы
+    if (q.type === 'single' && q.correct_option_index != null) {
       await api.post(`/questions/${questionId}/answers/correct`, {
-        optionid: optionIds[idx],
+        optionid:   optionIds[q.correct_option_index],
         questionid: questionId
       });
     }
+    if (q.type === 'multiple') {
+      for (const idx of q.correct_option_indexes || []) {
+        await api.post(`/questions/${questionId}/answers/correct`, {
+          optionid:   optionIds[idx],
+          questionid: questionId
+        });
+      }
+    }
   }
-}
-}
 
-
-    //console.log("Квиз сохранён на сервере:", quizId);
-    return quizRes;
-  },
+  return quizRes;
+},
 
   async loadQuizPreview(quizId) {
   const quizRes = await api.get(`/quizzes/${quizId}`);

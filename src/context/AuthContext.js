@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }) => {
           break;
         case 2:
         case 3:
-          navigate("/teacher");   // или как у вас называется страница преподавателей
+          navigate("/upload");   // или как у вас называется страница преподавателей
           break;
         default:
           navigate("/");          // всё равно куда-то на корень

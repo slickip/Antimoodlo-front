@@ -280,6 +280,11 @@ function ConfigUploadPage() {
       setYamlError(`YAML parsing error: ${e.message}`);
     }
   };
+
+//достаем юзер айди
+const { user } = useAuth();
+const userId = user?.userid;
+
 //проверка, можно ли добавить текущий вопрос (все ли поля заполнены корректно)
 const isDisabled = () => {
   const textEmpty = !currentQuestion.text.trim();
@@ -320,43 +325,39 @@ const isDisabled = () => {
   return true;
 };
 //сохраняет квиз в бд и обновляет список в интерфейсе
-  const saveQuiz = async () => {
-    const quizData = {
-      quizTitle,
-      quizDescription,
-      questions,
-      duration: quizDurationInput,
-      start: quizStart,
-      end: quizEnd
-    };
+const saveQuiz = async () => {
+  // валидация
+  if (!quizTitle.trim() || questions.length === 0) {
+    alert("Нужно задать заголовок и хотя бы один вопрос");
+    return;
+  }
 
-     if (quizStart && quizEnd && new Date(quizStart) >= new Date(quizEnd)) {
-      alert("Дата окончания должна быть позже даты начала");
-      return;
-    }
+  try {
+    setIsLoading(true);
 
-    try {
-      setIsLoading(true);
-      const response = await api.saveQuizToServer(quizData);
-      const newQuiz = {
-        id: response.data.id || Date.now(),
-        title: quizTitle,
-        description: quizDescription,
-        questions: questions,
-        createdAt: new Date().toISOString()
-      };
+    await api.saveQuizToServer({
+      quizTitle,                    // строка
+      description: quizDescription, // строка (может быть пустой)
+      duration: quizDurationInput,  // число
+      userId: user?.userid,         // из AuthContext
+      questions                     // массив вопросов, как у тебя сейчас
+    });
 
-      const updatedQuizzes = [...savedQuizzes, newQuiz];
-      setSavedQuizzes(updatedQuizzes);
-      localStorage.setItem('savedQuizzes', JSON.stringify(updatedQuizzes));
-      alert('Квиз успешно сохранен!');
-    } catch (error) {
-      console.error("Error saving quiz:", error);
-      alert('Ошибка при сохранении квиза');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    alert("Квиз успешно сохранён!");
+    // (по желанию) сбросить состояния:
+    // setQuizTitle("");
+    // setQuizDescription("");
+    // setQuestions([]);
+  } catch (err) {
+    console.error("Ошибка при сохранении квиза:", err);
+    alert("Ошибка при сохранении квиза");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
+
 
 //загружает квиз с сервера и устанавливает все поля формы + вопросы
 //я не уверена рабочая ли это часть, но лучше не трогать
@@ -897,11 +898,12 @@ const isDisabled = () => {
             </button>
             <button
               onClick={saveQuiz}
-              disabled={!quizTitle || questions.length === 0 || isLoading}
+              disabled={!quizTitle.trim() || questions.length === 0 || isLoading}
               className="action-btn save-btn"
             >
               {isLoading ? "Saving..." : <><FiSave /> Save Quiz</>}
             </button>
+
           </div>
         </div>
       )}
