@@ -8,6 +8,7 @@ import "../styles/ConfigUploadPage.css";
 import { v4 as uuidv4 } from 'uuid';
 import Sidebar from "../components/Sidebar";
 import Quiz from "../components/Quiz";
+import EditorForQuestion from "../components/EditorForQuestion";
 
 
 //штука чтобы startdate и enddate определялись и работали корректно
@@ -112,6 +113,15 @@ function ConfigUploadPage() {
     correct_matches: {},
     correctAnswerText: ""  
   });
+
+  const [expandedQuestionIds, setExpandedQuestionIds] = useState([]);
+const toggleExpand = id => {
+  setExpandedQuestionIds(prev =>
+    prev.includes(id)
+      ? prev.filter(x => x !== id)
+      : [...prev, id]
+  );
+};
 
   useEffect(() => {
     const loadQuizzes = async () => {
@@ -840,31 +850,19 @@ const saveQuiz = async () => {
           <h3 className="section-title">Added Questions ({questions.length})</h3>
           <div className="questions-list">
             {questions.map((q, i) => (
-                <div key={q.id} className="question-item">
-
-                <div>
-                  <div className="question-summary">{i + 1}. {q.question}</div>
-                  <div className="question-type">
-                    Type: {q.type === "single"
-                          ? "Single answer"
-                          : q.type === "multiple"
-                          ? "Multiple answers"
-                          : q.type === "matching"
-                          ? "Matching answers"
-                          : q.type === "open"
-                          ? "Open answer"
-                          : "Unknown"}
-
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setQuestions(questions.filter((_, idx) => idx !== i))}
-                  className="remove-question-btn"
-                >
-                  <FiTrash2 />
-                </button>
-              </div>
-            ))}
+  <EditorForQuestion
+    key={q.id}
+    question={q}
+    onUpdate={(updatedQ) =>
+      setQuestions((prev) =>
+        prev.map((x) => (x.id === updatedQ.id ? updatedQ : x))
+      )
+    }
+    onDelete={() =>
+      setQuestions((prev) => prev.filter((x) => x.id !== q.id))
+    }
+  />
+))}
           </div>
 
           <div className="actions-container">
@@ -1078,7 +1076,6 @@ quiz:
               <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                 <button
                  onClick={e => {
-                e.stopPropagation();
                 handlePreviewSavedQuiz(quiz);
                 }}
                 className="preview-quiz-btn"
