@@ -696,29 +696,50 @@ const saveQuiz = async () => {
   </div>
 )}
 
-        {currentQuestion.type === "matching" && ( //Я ХЗ ТУТ ЛИ ЭТО ДОЛЖНО НАХОДИТСЯ
+    {currentQuestion.type === "matching" && (
   <div>
     {/* Left column */}
     <div className="editor-field">
       <label className="editor-label">Left Column:</label>
       {currentQuestion.left_items.map((item, index) => (
-        <input
-          key={index}
-          type="text"
-          value={item}
-          onChange={e => {
-            const newLeft = [...currentQuestion.left_items];
-            newLeft[index] = e.target.value;
-            setCurrentQuestion({...currentQuestion, left_items: newLeft});
-          }}
-          placeholder={`Left ${index + 1}`}
-          className="option-input"
-        />
+        <div key={index} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <input
+            type="text"
+            value={item}
+            onChange={e => {
+              const newLeft = [...currentQuestion.left_items];
+              newLeft[index] = e.target.value;
+              setCurrentQuestion({...currentQuestion, left_items: newLeft});
+            }}
+            placeholder={`Left ${index + 1}`}
+            className="option-input"
+          />
+        </div>
       ))}
-      <button onClick={() =>
-        setCurrentQuestion({...currentQuestion, left_items: [...currentQuestion.left_items, ""]})
-      } className="add-option-btn">
+      <button
+        onClick={() => {
+          if (currentQuestion.left_items.length >= currentQuestion.right_items.length) return;
+          setCurrentQuestion({...currentQuestion, left_items: [...currentQuestion.left_items, ""]});
+        }}
+        className="add-option-btn"
+        disabled={currentQuestion.left_items.length >= currentQuestion.right_items.length}
+      >
         <FiPlus size={16} /> Add Left
+      </button>
+      <button
+        onClick={() => {
+          const newLeft = [...currentQuestion.left_items];
+          newLeft.pop();
+          setCurrentQuestion({
+            ...currentQuestion,
+            left_items: newLeft
+          });
+        }}
+        className="remove-option-btn"
+        disabled={currentQuestion.left_items.length === 0}
+        style={{ marginLeft: 8 }}
+      >
+        <FiTrash2 /> Remove Left
       </button>
     </div>
 
@@ -726,23 +747,50 @@ const saveQuiz = async () => {
     <div className="editor-field">
       <label className="editor-label">Right Column:</label>
       {currentQuestion.right_items.map((item, index) => (
-        <input
-          key={index}
-          type="text"
-          value={item}
-          onChange={e => {
-            const newRight = [...currentQuestion.right_items];
-            newRight[index] = e.target.value;
-            setCurrentQuestion({...currentQuestion, right_items: newRight});
-          }}
-          placeholder={`Right ${index + 1}`}
-          className="option-input"
-        />
+        <div key={index} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <input
+            type="text"
+            value={item}
+            onChange={e => {
+              const newRight = [...currentQuestion.right_items];
+              newRight[index] = e.target.value;
+              setCurrentQuestion({...currentQuestion, right_items: newRight});
+            }}
+            placeholder={`Right ${index + 1}`}
+            className="option-input"
+          />
+        </div>
       ))}
-      <button onClick={() =>
-        setCurrentQuestion({...currentQuestion, right_items: [...currentQuestion.right_items, ""]})
-      } className="add-option-btn">
+      <button
+        onClick={() => {
+          const diff = currentQuestion.right_items.length - currentQuestion.left_items.length;
+          if (diff >= 5) return;
+          setCurrentQuestion({...currentQuestion, right_items: [...currentQuestion.right_items, ""]});
+        }}
+        className="add-option-btn"
+        disabled={currentQuestion.right_items.length - currentQuestion.left_items.length >= 5}
+      >
         <FiPlus size={16} /> Add Right
+      </button>
+      <button
+        onClick={() => {
+          let newRight = [...currentQuestion.right_items];
+          let newLeft = [...currentQuestion.left_items];
+          if (newRight.length === newLeft.length) {
+            newLeft.pop();
+          }
+          newRight.pop();
+          setCurrentQuestion({
+            ...currentQuestion,
+            right_items: newRight,
+            left_items: newLeft
+          });
+        }}
+        className="remove-option-btn"
+        disabled={currentQuestion.right_items.length === 0}
+        style={{ marginLeft: 8 }}
+      >
+        <FiTrash2 /> Remove Right
       </button>
     </div>
 
@@ -775,6 +823,7 @@ const saveQuiz = async () => {
     </div>
   </div>
 )}
+
 
 {(currentQuestion.type === "single" || currentQuestion.type === "multiple") && (
   <div className="editor-field">
