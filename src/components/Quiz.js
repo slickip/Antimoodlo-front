@@ -158,6 +158,7 @@ return (
       if (q.type === "matching") {
         return (
           <div key={q.id} style={{ marginBottom: 24 }}>
+            {/* заголовок + картинка */}
             <strong>
               {i + 1}. {q.question}{" "}
               <span style={{ fontWeight: "normal", fontSize: 14 }}>
@@ -165,6 +166,18 @@ return (
               </span>
             </strong>
 
+            {q.imageurl && (
+              <img
+                src={q.imageurl}
+                alt=""
+                style={{
+                  display: "block",   /* новая строка */
+                  maxWidth: 200,
+                  margin: "8px 0",    /* сверху/снизу отступ, слева 0  */
+                  borderRadius: 6
+                }}
+              />
+            )}
             <MatchingQuestion
               question={q}
               answer={answers}
@@ -179,6 +192,18 @@ return (
         return (
           <div key={q.id} style={{ marginBottom: 24 }}>
             <strong>{i + 1}. {q.question}</strong>
+            {q.imageurl && (
+              <img
+                src={q.imageurl}
+                alt=""
+                style={{
+                  display: "block",   /* перенос на новую строку */
+                  maxWidth: 200,
+                  margin: "8px 0",    /* сверху/снизу отступ, слева 0 */
+                  borderRadius: 6
+                }}
+              />
+            )}
             <input
               type="text"
               value={answers[q.id] || ""}
@@ -219,11 +244,16 @@ return (
       return (
         <div key={q.id} style={{ marginBottom: 16 }}>
           <strong>{i + 1}. {q.question}</strong>
-          {q.image && (
+          {q.imageurl && (
             <img
-              src={q.image}
+              src={q.imageurl}
               alt=""
-              style={{ maxWidth: 400, margin: "8px 0", borderRadius: 6 }}
+              style={{
+                display: "block",   /* перенос на новую строку */
+                maxWidth: 200,
+                margin: "8px 0",    /* сверху/снизу отступ, слева 0 */
+                borderRadius: 6
+              }}
             />
           )}
           {q.options.map((opt, idx) => {
@@ -265,14 +295,7 @@ return (
                     <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       {/* текст / подпись */}
                       {typeof opt === "string" ? opt : opt.text}
-                      {/* картинка, если есть */}
-                      {typeof opt !== "string" && opt.image && (
-                        <img
-                          src={opt.image}
-                          alt=""
-                          style={{ maxWidth: 120, borderRadius: 4 }}
-                        />
-                      )}
+                  
                       {/* галочка / крестик после проверки */}
                       {icon}
                     </span>

@@ -5,6 +5,20 @@ import Quiz from "../components/Quiz";
 import api from "../services/Api";
 import "../styles/ConfigUploadPage.css";
 
+/** приводит формат превью к тому, что ждёт <Quiz /> */
+function normalizePreview(raw) {
+  return {
+    title: raw.title,
+    description: raw.description,
+    start: raw.startdate || raw.start,
+    end: raw.enddate   || raw.end,
+    duration: raw.duration,
+    questions: (raw.questions || []).map((q) => ({
+      ...q,
+      imageurl: q.imageurl || "",
+    })),
+  };
+}
 
 export default function QuizPage() {
   const { quizId } = useParams();
@@ -17,8 +31,8 @@ export default function QuizPage() {
     (async () => {
       try {
         setLoading(true);
-        const preview = await api.loadQuizPreview(quizId);
-        setQuizConfig({ quiz: preview });
+        const raw = await api.loadQuizPreview(quizId);
+        setQuizConfig({ quiz: normalizePreview(raw) });
       } catch (err) {
         console.error("Не удалось загрузить квиз:", err);
       } finally {

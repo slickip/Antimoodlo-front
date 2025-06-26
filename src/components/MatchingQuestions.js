@@ -125,8 +125,8 @@ function MatchingQuestion({ question, answer, setAnswer, disabled }) {
               >
                 {availableRightItems.map((opt, index) => (
                   <Draggable
-                    key={opt}
-                    draggableId={opt}
+                    key={`${opt}-${index}`}
+                    draggableId={`${question.id}-${opt}-${index}`}
                     index={index}
                     isDragDisabled={disabled}
                   >

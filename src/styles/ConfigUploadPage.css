@@ -698,3 +698,10 @@
   border-radius: 4px;
   border: 1px solid #f5c6cb;
 }
+.quiz-question-imageurl,
+.question-editor-imageurl {
+  max-width: 100%;
+  max-height: 180px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+}

@@ -105,8 +105,8 @@ function ConfigUploadPage() {
     text: "",
     type: "single",
     points: 1,
-    options: [{ text: "", image: "" }, { text: "", image: "" }],
-    image: "", // картинка самого вопроса
+    options: ["", ""],
+    imageurl: "", // картинка самого вопроса
     correctOption: null,
     correctOptions: [],
     left_items: [""],
@@ -418,6 +418,7 @@ const saveQuiz = async () => {
   if (currentQuestion.type === "matching") {
     newQuestion = {
       ...base,
+      imageurl: currentQuestion.imageurl || undefined,
       left_items: currentQuestion.left_items.filter(item => item.trim() !== ""),
       right_items: currentQuestion.right_items.filter(item => item.trim() !== ""),
       correct_matches: currentQuestion.correct_matches,
@@ -426,13 +427,8 @@ const saveQuiz = async () => {
   } else if (currentQuestion.type === "single") {
     newQuestion = {
       ...base,
-      image: currentQuestion.image,
-      options: currentQuestion.options
-        .filter(o => {
-          const t = typeof o === "string" ? o : o.text;
-          return t.trim() !== "";
-        })
-        .map(o => (o.image ? o : (typeof o === "string" ? o : o.text))), // объект → объект, чистый текст → строка
+      imageurl: currentQuestion.imageurl || undefined,
+      options: currentQuestion.options.filter(t => t.trim() !== ""),
       correct_option_index: currentQuestion.correctOption,
       points: currentQuestion.points 
     }
@@ -440,6 +436,7 @@ const saveQuiz = async () => {
     newQuestion = {
     id: questions.length + 1,
     question: currentQuestion.text,
+    imageurl: currentQuestion.imageurl || undefined,
     type: "open",
     correct_answer_text: currentQuestion.correctAnswerText,
     points: currentQuestion.points  
@@ -447,12 +444,8 @@ const saveQuiz = async () => {
   } else {
     newQuestion = {
       ...base,
-      options: currentQuestion.options
-        .filter(o => {
-          const t = typeof o === "string" ? o : o.text;
-          return t.trim() !== "";
-        })
-        .map(o => (o.image ? o : (typeof o === "string" ? o : o.text))), // объект → объект, чистый текст → строка
+      imageurl: currentQuestion.imageurl || undefined,
+      options: currentQuestion.options.filter(t => t.trim() !== ""),
       correct_option_indexes: currentQuestion.correctOptions,
       points: currentQuestion.points 
     };
@@ -465,8 +458,8 @@ const saveQuiz = async () => {
     text: "",
     type: "single",
     points: 1,
-    options: [{ text: "", image: "" }, { text: "", image: "" }],
-    image: "", // картинка самого вопроса
+    options: ["", ""],
+    imageurl: "", // картинка самого вопроса
     correctOption: null,
     correctOptions: [],
     left_items: [""],
@@ -477,17 +470,17 @@ const saveQuiz = async () => {
 
 //обновляет конкретный вариант ответа в массиве options
   const updateOption = (index, value) => {
-    const toObj = (v) => (typeof v === "string" ? { text: v, image: "" } : v);
-    const newOptions = currentQuestion.options.map(toObj);
-    newOptions[index] = toObj(value);
-    setCurrentQuestion({...currentQuestion, options: newOptions});
+    setCurrentQuestion((q) => ({
+      ...q,
+      options: q.options.map((o, i) => (i === index ? value : o)),
+    }));
   };
 
 //добавляет окно для ввода нового варианта ответа
   const addOption = () => {
     setCurrentQuestion({
       ...currentQuestion,
-      options: [...currentQuestion.options, { text: "", image: "" }]
+      options: [...currentQuestion.options, ""]
     });
   };
 
@@ -632,15 +625,13 @@ const saveQuiz = async () => {
         <label className="editor-label">Question Image URL:</label>
         <input
           type="text"
-          value={currentQuestion.image || ""}
-          onChange={e =>
-            setCurrentQuestion({ ...currentQuestion, image: e.target.value.trim() })
-          }
+          value={currentQuestion.imageurl || ""}
+          onChange={e => setCurrentQuestion({ ...currentQuestion, imageurl: e.target.value.trim() })}
           className="editor-input"
           placeholder="https://example.com/pic.png"
         />
-        {currentQuestion.image && (
-          <img src={currentQuestion.image}
+        {currentQuestion.imageurl && (
+          <img src={currentQuestion.imageurl}
               alt=""
               style={{ maxHeight: 80, marginTop: 6 }}/>
         )}
@@ -789,65 +780,39 @@ const saveQuiz = async () => {
   <div className="editor-field">
     <label className="editor-label">Options:</label>
 
-    {currentQuestion.options.map((opt, index) => {
-      const o = typeof opt === "string" ? { text: opt, image: "" } : opt;
+    {currentQuestion.options.map((opt, index) => (
+      <div key={index} className="option-row">
+        {/* radio / checkbox */}
+        <input
+          type={currentQuestion.type === "single" ? "radio" : "checkbox"}
+          name={`correct-${currentQuestion.id}`}
+          checked={
+            currentQuestion.type === "single"
+              ? currentQuestion.correctOption === index
+              : currentQuestion.correctOptions.includes(index)
+          }
+          onChange={(e) => handleCorrectAnswerChange(index, e.target.checked)}
+          className="correct-answer-input"
+        />
 
-      return (
-        <div key={index} className="option-row">
-          {/* чек-бокс / радио для правильного ответа */}
-          <input
-            type={currentQuestion.type === "single" ? "radio" : "checkbox"}
-            name={`correct-${currentQuestion.id}`}
-            checked={
-              currentQuestion.type === "single"
-                ? currentQuestion.correctOption === index
-                : currentQuestion.correctOptions.includes(index)
-            }
-            onChange={(e) => handleCorrectAnswerChange(index, e.target.checked)}
-            className="correct-answer-input"
-          />
+        {/* текст варианта */}
+        <input
+          type="text"
+          value={opt}
+          onChange={(e) => updateOption(index, e.target.value)}
+          className="option-input"
+          placeholder={`Option ${index + 1}`}
+        />
 
-          {/* текст */}
-          <input
-            type="text"
-            value={o.text}
-            onChange={(e) =>
-              updateOption(index, { ...o, text: e.target.value })
-            }
-            className="option-input"
-            placeholder={`Option ${index + 1}`}
-          />
-
-          {/* URL картинки */}
-          <input
-            type="text"
-            value={o.image || ""}
-            onChange={e =>
-              updateOption(index, { ...o, image: e.target.value.trim() })
-            }
-            className="option-input"
-            style={{ marginLeft: 6, flex: "1 1 220px" }}
-            placeholder="Image URL (optional)"
-          />
-
-          {/* превью */}
-          {o.image && (
-            <img
-              src={o.image}
-              alt=""
-              style={{ maxHeight: 50, marginLeft: 6 }}
-            />
-          )}
-
-          <button
-            onClick={() => removeOption(index)}
-            className="remove-option-btn"
-          >
-            <FiTrash2 />
-          </button>
-        </div>
-      );
-    })}
+        {/* удалить */}
+        <button
+          onClick={() => removeOption(index)}
+          className="remove-option-btn"
+        >
+          <FiTrash2 />
+        </button>
+      </div>
+    ))}
 
     <button onClick={addOption} className="add-option-btn">
       <FiPlus size={16} /> Add Option
@@ -945,6 +910,7 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
             type,
             options,
             correct_option_index: correctIndex >= 0 ? correctIndex : undefined,
+            imageurl: q.imageurl,
             points: q.points
           };
         }
@@ -962,6 +928,7 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
             type,
             options,
             correct_option_indexes: correctIndexes,
+            imageurl: q.imageurl,
             points: q.points
           };
         }
@@ -972,6 +939,7 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
             question: q.questiontext,
             type,
             correct_answer_text: ans.openAnswers[0]?.answertext || "",
+            imageurl: q.imageurl,
             points: q.points
           };
         }
@@ -996,6 +964,7 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
             left_items,
             right_items,
             correct_matches,
+            imageurl: q.imageurl,
             points: q.points
           };
         }
@@ -1006,6 +975,7 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
           type: "single",
           options: ans.options.map((o) => o.optiontext),
           correct_option_index: undefined,
+          imageurl: q.imageurl,
           points: q.points
         };
       })

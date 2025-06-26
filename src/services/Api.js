@@ -188,7 +188,7 @@ export default {
         questiontext:   q.question,
         questiontypeid: questionTypeMap[q.type],
         quizid:         quizId,
-        imageurl:       q.image  || undefined,
+        imageurl:       q.imageurl  || undefined,
         points:         q.points
       });
     const questionId = questionRes.data.id;
@@ -310,9 +310,9 @@ export default {
       acc[m.lefttext] = m.righttext;
       return acc;
     }, {});
-
+    
     const leftItems = Object.keys(correctMatches);
-    const rightItems = Object.values(correctMatches);
+    const rightItems = Object.values(correctMatches); // уникальные правые
 
     // 5) Для open — текст ответа
     const correctAnswerText = openAnswers[0]?.answertext || "";
@@ -323,6 +323,7 @@ export default {
       question: q.questiontext,
       type,
       points: q.points,
+      imageurl: q.imageurl || "",
       ...(type !== "matching" && type !== "open" && { options: optionTexts }),
       ...(type === "single"   && { correct_option_index:   correctIndex }),
       ...(type === "multiple" && { correct_option_indexes: correctIndexes }),
