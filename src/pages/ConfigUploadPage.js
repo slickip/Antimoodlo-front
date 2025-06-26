@@ -99,7 +99,7 @@ function ConfigUploadPage() {
   const [yamlHistory, setYamlHistory]   = useState([""]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [yamlError, setYamlError] = useState(null);
-
+  const [quizId,    setQuizId]    = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState({
     id: 1,
     text: "",
@@ -271,6 +271,7 @@ const toggleExpand = id => {
       }
 
       setActiveTab('create');
+      setQuizId(null);
       setYamlError(null);
     } catch (e) {
       setYamlError(`YAML parsing error: ${e.message}`);
@@ -352,39 +353,243 @@ const saveQuiz = async () => {
   }
 };
 
+// отрисовалась кнопка updateQuiz — добавляем саму логику
+const updateQuiz = async () => {
+  if (!quizTitle.trim() || questions.length === 0) {
+    alert("Нужно задать заголовок и хотя бы один вопрос");
+    return;
+  }
+  try {
+    setIsLoading(true);
+
+    // В ConfigUploadPage.js, внутри функции updateQuiz перед вызовом API:
+
+const isoStart = quizStart
+  ? new Date(quizStart).toISOString()
+  : null;
+const isoEnd = quizEnd
+  ? new Date(quizEnd).toISOString()
+  : null;
+
+// И затем:
+await api.updateQuizMeta(quizId, {
+  id:           quizId,
+  courseid:     1,
+  title:        quizTitle,
+  description:  quizDescription,
+  duration:     quizDurationInput,
+  startdate:    isoStart,
+  enddate:      isoEnd,
+  maxgrade:     100,
+  stateid:      1,
+  submiteddate: new Date().toISOString(),
+  userid:       userId
+});
+
+
+    // 2) Пробегаем по каждому вопросу и обновляем его и ответы
+    const typeMap = { single:1, multiple:2, open:3, matching:4 };
+
+    for (const q of questions) {
+      // 2.1) обновляем вопрос
+      await api.updateQuestion(q.id, {
+        id:             q.id,
+        questiontext:   q.question,
+        questiontypeid: typeMap[q.type],
+        quizid:         quizId,
+        imageurl:       q.imageurl || "",
+        points:         q.points
+      });
+
+      // 2.2) забираем текущие ответы с сервера
+      const ans = await api.getAllAnswers(q.id);
+      const { options, correctAnswers, matchPairs, openAnswers } = ans.data;
+
+      if (q.type === "single" || q.type === "multiple") {
+        // — обновляем опции
+        for (let i = 0; i < q.options.length; i++) {
+          const text = q.options[i];
+          const existing = options[i];
+          if (existing) {
+            await api.updateOption(existing.id, {
+              id:         existing.id,
+              optiontext: text,
+              questionid: q.id
+            });
+          } else {
+            await api.createOption(q.id, {
+              optiontext: text,
+              questionid: q.id
+            });
+          }
+        }
+        // — сбрасываем все старые правильные ответы
+        for (const ca of correctAnswers) {
+          await api.deleteCorrectAnswer(ca.id);
+        }
+        // — добавляем новые
+        const correctIdxList = q.type === "single"
+          ? [q.correct_option_index]
+          : q.correct_option_indexes;
+        for (const idx of correctIdxList) {
+          await api.addCorrectAnswer(q.id, {
+            optionid:   options[idx].id,
+            questionid: q.id
+          });
+        }
+      }
+      else if (q.type === "matching") {
+        // — обновляем пары
+        for (const mp of matchPairs) {
+          const newR = q.correct_matches[mp.lefttext];
+          if (newR) {
+            await api.updateMatchPair(mp.id, {
+              id:         mp.id,
+              lefttext:   mp.lefttext,
+              righttext:  newR,
+              questionid: q.id
+            });
+          } else {
+            await api.deleteMatchPair(mp.id);
+          }
+        }
+        // — создаём новыe пары, которых не было
+        for (const [L, R] of Object.entries(q.correct_matches)) {
+          if (!matchPairs.find(x => x.lefttext===L && x.righttext===R)) {
+            await api.createMatchPair({ lefttext:L, righttext:R, questionid:q.id });
+          }
+        }
+      }
+      else if (q.type === "open") {
+        const { openAnswers } = ans.data;
+        // если openAnswers не пустой – обновляем
+        if (openAnswers && openAnswers.length > 0) {
+          const existing = openAnswers[0];
+          await api.updateOpenAnswer(existing.id, {
+            answertext: q.correct_answer_text,    // или q.correctAnswerText, в зависимости от того, как вы храните это поле
+            questionid: q.id
+          });
+        }
+        // иначе – создаём новый
+        else {
+          await api.addOpenAnswer(q.id, {
+            answertext: q.correct_answer_text,
+            questionid: q.id
+          });
+        }
+      }
+    }
+
+    alert("Квиз успешно обновлён!");
+  }
+  catch (err) {
+    console.error(err);
+    alert("Ошибка при обновлении квиза");
+  }
+  finally {
+    setIsLoading(false);
+  }
+};
 
 
 
 //загружает квиз с сервера и устанавливает все поля формы + вопросы
 //я не уверена рабочая ли это часть, но лучше не трогать
- const loadSavedQuiz = async (quiz) => {
+ const loadSavedQuiz = async (quizMeta) => {
   try {
     setIsLoading(true);
-    const response = await api.loadQuizFromServer(quiz.id);
-    const serverQuiz = response.data;
+    const { data: quizData } = await api.getQuiz(quizMeta.id);
+    setQuizId(quizMeta.id);
+    setQuizTitle(quizData.title || "");
+    setQuizDescription(quizData.description || "");
+    // для datetime-local формат YYYY-MM-DDTHH:MM
+    setQuizStart(quizData.startdate?.slice(0, 16) || "");
+    setQuizEnd(  quizData.enddate?.slice(0, 16)   || "");
+    setQuizDurationInput(quizData.duration || 60);
 
-    // Устанавливаем поля из базы
-    setQuizTitle(serverQuiz.title || "");
-    setQuizDescription(serverQuiz.description || "");
-    setQuizStart(serverQuiz.startdate || "");
-    setQuizEnd(serverQuiz.enddate || "");
+    const { data: questionsList } = await api.getQuestions(quizMeta.id);
 
-    //получаем вопросы
-    const questionsResponse = await api.getQuestions(quiz.id);
-    const serverQuestions = questionsResponse.data;
+    const detailed = await Promise.all(
+      questionsList.map(async (q) => {
+        const { data: ans } = await api.getAllAnswers(q.id);
+        const { options: rawOptions, correctAnswers, matchPairs, openAnswers } = ans;
 
-    setQuestions(serverQuestions || []);
-    setActiveTab('create');
-  } catch (error) {
-    console.warn("Failed to load from server, using local data:", error);
-    setQuizTitle(quiz.title);
-    setQuizDescription(quiz.description);
-    setQuestions(quiz.questions);
-    setActiveTab('create');
-  } finally {
+        // 1) сначала сконвертируем rawOptions в чистый массив строк:
+        const opts = rawOptions.map(o => o.optiontext);
+
+        // 2) вычислим индексы правильных ответов
+        const correctIdx = correctAnswers
+          .map(ca => rawOptions.findIndex(o => o.id === ca.optionid))
+          .filter(i => i >= 0);
+
+        // 3) определим тип
+        let type;
+        switch (q.questiontypeid) {
+          case 1: type = "single";   break;
+          case 2: type = "multiple"; break;
+          case 3: type = "open";     break;
+          case 4: type = "matching"; break;
+          default: type = "single";
+        }
+
+        // 4) Собираем итоговый объект
+        const base = {
+          id:       q.id,
+          question: q.questiontext,    // название вопроса
+          type,
+          points:   q.points,
+          imageurl: q.imageurl || ""
+        };
+
+        if (type === "single" || type === "multiple") {
+          return {
+            ...base,
+            options: opts,                        // <- вот здесь теперь просто строки
+            // правильный индекс (single) или список индексов (multiple)
+            correct_option_index:   type === "single"   ? correctIdx[0]      : undefined,
+            correct_option_indexes: type === "multiple" ? correctIdx         : undefined
+          };
+        }
+
+        if (type === "open") {
+          return {
+            ...base,
+            correct_answer_text: openAnswers[0]?.answertext || ""
+          };
+        }
+
+        if (type === "matching") {
+          const left  = rawOptions
+            .filter(o => !matchPairs.some(p => p.righttext === o.optiontext))
+            .map(o => o.optiontext);
+          const right = rawOptions
+            .filter(o =>  matchPairs.some(p => p.righttext === o.optiontext))
+            .map(o => o.optiontext);
+          const correct = Object.fromEntries(
+            matchPairs.map(p => [p.lefttext, p.righttext])
+          );
+          return {
+            ...base,
+            left_items:      left,
+            right_items:     right,
+            correct_matches: correct
+          };
+        }
+
+        return base;
+      })
+    );
+
+    setQuestions(detailed);
+    setActiveTab("create");
+  }
+  finally {
     setIsLoading(false);
   }
 };
+
+
+
 
 //удаляет квиз с сервера и из локального списка
   const deleteSavedQuiz = async (id, e) => {
@@ -416,15 +621,16 @@ const saveQuiz = async () => {
   let newQuestion;
 
   if (currentQuestion.type === "matching") {
-    newQuestion = {
-      ...base,
-      imageurl: currentQuestion.imageurl || undefined,
-      left_items: currentQuestion.left_items.filter(item => item.trim() !== ""),
-      right_items: currentQuestion.right_items.filter(item => item.trim() !== ""),
-      correct_matches: currentQuestion.correct_matches,
-      points: currentQuestion.points 
-    };
-  } else if (currentQuestion.type === "single") {
+  newQuestion = {
+    ...base,
+    imageurl: currentQuestion.imageurl || undefined,
+    left_items:  currentQuestion.left_items.slice(),
+    right_items: currentQuestion.right_items.slice(),
+    correct_matches: currentQuestion.correct_matches,
+    points: currentQuestion.points 
+  };
+}
+ else if (currentQuestion.type === "single") {
     newQuestion = {
       ...base,
       imageurl: currentQuestion.imageurl || undefined,
@@ -914,11 +1120,11 @@ const saveQuiz = async () => {
               <FiUpload /> Export as YAML
             </button>
             <button
-              onClick={saveQuiz}
+              onClick={quizId ? updateQuiz : saveQuiz}
               disabled={!quizTitle.trim() || questions.length === 0 || isLoading}
               className="action-btn save-btn"
             >
-              {isLoading ? "Saving..." : <><FiSave /> Save Quiz</>}
+              {isLoading ? (quizId ? "Updating…" : "Saving…") : <><FiSave /> {quizId ? "Update Quiz" : "Save Quiz"}</>}
             </button>
 
           </div>
@@ -1053,43 +1259,58 @@ const handlePreviewSavedQuiz = async (quizMeta) => {
 
 const yamlExample = `QUIZ EXAMPLE:
 quiz:
-  title: Example quiz (Please write the title on English)
-  duration: 120
-  start: 2025-06-19T21:00
-  end: 2025-06-30T23:53
+  title: Sample
+  description: This quiz includes all question types with point values.
+  duration: 300  # секунды
+  start: 2025-06-25T10:00
+  end: 2025-06-30T23:59
   questions:
     - id: 1
-      question: How are you?
       type: single
+      question: What is the capital of France?
       options:
-        - Fine
-        - Bad
-      correct_option_index: 0
+        - Berlin
+        - Paris
+        - Madrid
+      correct_option_index: 1
+      points: 2
+
     - id: 2
-      question: Why?
       type: multiple
+      question: Select all prime numbers
       options:
-        - Because of beautiful day
-        - Everything is bad in my life
-        - Woke up with this mood
+        - "4"
+        - "7"
+        - "11"
+        - "9"
       correct_option_indexes:
-        - 0
+        - 1
         - 2
+      points: 3
+
     - id: 3
-      question: Match next things right
       type: matching
+      question: Match the country to its flag color
       left_items:
-        - Plant
-        - Raise
-        - Build
+        - Japan
+        - Germany
+        - Italy
       right_items:
-        - a house
-        - a child
-        - a tree
+        - Red circle
+        - Black, red, yellow
+        - Green, white, red
       correct_matches:
-        Plant: a tree
-        Raise: a child
-        Build: a house
+        Japan: Red circle
+        Germany: Black, red, yellow
+        Italy: Green, white, red
+      points: 4
+
+    - id: 4
+      type: open
+      question: Who wrote 'War and Peace'?
+      correct_answer_text: Leo Tolstoy
+      points: 5
+
 `;
 
 

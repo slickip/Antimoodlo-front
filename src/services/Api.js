@@ -43,18 +43,20 @@ api.interceptors.response.use(
 
 // Функция для преобразования данных формы в формат API
 const transformQuizData = (quizData) => {
-  return {
-    title: quizData.quizTitle,
-    description: quizData.quizDescription,
-    questions: quizData.questions.map(question => ({
-      question: question.text,
-      type: question.type,
-      options: question.options,
-      correct_option_index: question.type === 'single' ? question.correctOption : undefined,
-      correct_option_indexes: question.type === 'multiple' ? question.correctOptions : undefined
-    }))
-  };
-};
+ // Если quizData.questions нет — используем пустой массив
+   const rawQs = Array.isArray(quizData.questions) ? quizData.questions : [];
+
+   return {
+     title:       quizData.quizTitle,
+     description: quizData.quizDescription,
+     questions:   rawQs.map(question => ({
+       question: question.text,
+       type:     question.type,
+       options:  question.options,
+       // …
+     }))
+   };
+ };
 
 export default {
   // Работа с тестами
@@ -62,6 +64,15 @@ export default {
     return api.get('/quizzes');
   },
   
+  updateQuizMeta(id, data) {
+    return api.put(`/quizzes/${id}`, data);
+  },
+
+  updateQuizOnServer(id, quizData) {
+    // убрать transformQuizData или оставить для POST
+    return this.updateQuizMeta(id, quizData);
+  },
+
   getQuiz(id) {
     return api.get(`/quizzes/${id}`);
   },
@@ -80,10 +91,22 @@ export default {
   return api.post('/quizzes', payload);
 },
   
-  getAllAnswers(questionId) {
-    return api.get(`/questions/${questionId}/answers`);
+  updateMatchPair(id, data) {
+    return api.put(`/answers/match/${id}`, data);
+  },
+  deleteMatchPair(id) {
+    return api.delete(`/answers/match/${id}`);
+  },
+  createMatchPair(data) {
+    return api.post(`/questions/${data.questionid}/answers/match`, data);
   },
 
+  updateOpenAnswer(id, data) {
+    return api.put(`/answers/open/${id}`, data);
+  },
+  updateOption(optionId, optionData) {
+    return api.put(`/answers/options/${optionId}`, optionData);
+  },
   updateQuiz(id, quizData) {
     const transformedData = transformQuizData(quizData);
     return api.put(`/quizzes/${id}`, transformedData);
@@ -120,10 +143,6 @@ export default {
   
   createOption(questionId, optionData) {
     return api.post(`/questions/${questionId}/options`, optionData);
-  },
-  
-  updateOption(optionId, optionData) {
-    return api.put(`/qptions/${optionId}`, optionData);
   },
   
   deleteOption(optionId) {
