@@ -50,6 +50,22 @@ export default function EditorForQuestion({ question, onUpdate, onDelete }) {
     });
   };
 
+  const buttonStyle = {
+  padding: '12px 24px',
+  backgroundColor: '#292E52',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 8,
+  cursor: 'pointer',
+  fontSize: 16,
+  fontWeight: 500,
+  transition: 'opacity 0.3s, background-color 0.3s',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8
+};
+
+
   //Обработчик выбора правильного ответа
   const handleCorrectAnswerChange = (idx, checked) => {
     setLocal(prev => {
@@ -90,8 +106,18 @@ export default function EditorForQuestion({ question, onUpdate, onDelete }) {
       return { ...prev, right_items: right };
     });
   };
-  const addLeft = () => setLocal(prev => ({ left_items: [...prev.left_items, ""], right_items: prev.right_items, correct_matches: prev.correct_matches }));
-  const addRight = () => setLocal(prev => ({ right_items: [...prev.right_items, ""], left_items: prev.left_items, correct_matches: prev.correct_matches }));
+  const addLeft = () =>
+  setLocal(prev => ({
+    ...prev,
+    left_items: [...prev.left_items, ""]
+  }));
+
+const addRight = () =>
+  setLocal(prev => ({
+    ...prev,
+    right_items: [...prev.right_items, ""]
+  }));
+
   const handleMatchSelect = (left, right) => {
     setLocal(prev => ({
       ...prev,
@@ -228,18 +254,7 @@ if (isEditing) {
       ))}
       <button
         onClick={addOption}
-        style={{
-          marginTop: 8,
-          backgroundColor: '#292E52',
-          color: '#fff',
-          padding: '6px 12px',
-          border: 'none',
-          borderRadius: 6,
-          fontSize: 14,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6
-        }}
+        style={buttonStyle}
       >
         <FiPlus size={14} />
         Add option
@@ -249,80 +264,81 @@ if (isEditing) {
 
   {/* Matching */}
   {local.type === 'matching' && (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    {/* Left Column */}
     <div>
-      <label style={{ fontWeight: 'bold' }}>Matching:</label>
-      {local.left_items.map((l, i) => (
-        <div
-          key={i}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}
-        >
+      <label style={{ fontWeight: 'bold' }}>Left Column:</label>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+        {local.left_items.map((item, idx) => (
           <input
+            key={idx}
             type="text"
-            value={l}
-            onChange={e => updateLeft(i, e.target.value)}
-            placeholder={`Left ${i + 1}`}
-            style={{
-              width: 120,
-              padding: 6,
-              borderRadius: 6,
-              border: '1px solid #ccc'
-            }}
+            value={item}
+            onChange={e => updateLeft(idx, e.target.value)}
+            placeholder={`Left ${idx + 1}`}
+            style={{ padding: 6, borderRadius: 6, border: '1px solid #ccc', minWidth: 120 }}
           />
-          <span style={{ margin: '0 4px' }}>→</span>
-          <select
-            value={local.correct_matches[l] || ''}
-            onChange={e => handleMatchSelect(l, e.target.value)}
-            style={{
-              padding: 6,
-              borderRadius: 6,
-              border: '1px solid #ccc',
-              flex: 1
-            }}
-          >
-            <option value="">—</option>
-            {local.right_items.map((r, j) => (
-              <option key={j} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
-        </div>
-      ))}
-
-      <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+        ))}
         <button
           onClick={addLeft}
-          style={{
-            backgroundColor: '#292E52',
-            color: '#fff',
-            padding: '6px 12px',
-            borderRadius: 6,
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6
-          }}
+          disabled={local.left_items.length >= local.right_items.length}
+          style={buttonStyle}
         >
           <FiPlus size={14} /> Add Left
         </button>
+      </div>
+    </div>
+
+    {/* Right Column */}
+    <div>
+      <label style={{ fontWeight: 'bold' }}>Right Column:</label>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+        {local.right_items.map((item, idx) => (
+          <input
+            key={idx}
+            type="text"
+            value={item}
+            onChange={e => updateRight(idx, e.target.value)}
+            placeholder={`Right ${idx + 1}`}
+            style={{ padding: 6, borderRadius: 6, border: '1px solid #ccc', minWidth: 120 }}
+          />
+        ))}
         <button
           onClick={addRight}
-          style={{
-            backgroundColor: '#292E52',
-            color: '#fff',
-            padding: '6px 12px',
-            borderRadius: 6,
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6
-          }}
+          disabled={local.right_items.length > local.left_items.length + 5}
+          style={buttonStyle}
         >
           <FiPlus size={14} /> Add Right
         </button>
       </div>
     </div>
-  )}
+
+    {/* Correct Matches */}
+    <div>
+      <label style={{ fontWeight: 'bold' }}>Correct Matches:</label>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        {local.left_items.map((left, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ minWidth: 80 }}>{left || `Left ${i + 1}`}</span>
+            <select
+              value={local.correct_matches[left] || ''}
+              onChange={e => handleMatchSelect(left, e.target.value)}
+              style={{ flex: 1, padding: 6, borderRadius: 6, border: '1px solid #ccc' }}
+            >
+              <option value="">Select match</option>
+              {local.right_items.map((r, j) => (
+                <option key={j} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
+
 
   {/* Buttons */}
   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
@@ -331,34 +347,14 @@ if (isEditing) {
         onUpdate(local);
         setIsEditing(false); // выход из режима редактирования
       }}
-      style={{
-        backgroundColor: '#292E52',
-        color: '#fff',
-        padding: '6px 12px',
-        border: 'none',
-        borderRadius: 6,
-        fontSize: 14,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6
-      }}
+      style={buttonStyle}
     >
       <FiSave size={14} />
       Save
     </button>
     <button
       onClick={onDelete}
-      style={{
-        backgroundColor: '#292E52',
-        color: '#fff',
-        padding: '6px 12px',
-        border: 'none',
-        borderRadius: 6,
-        fontSize: 14,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6
-      }}
+      style={buttonStyle}
     >
       <FiTrash2 size={14} />
       Delete
@@ -389,34 +385,14 @@ return (
   <div style={{ display: 'flex', gap: 8 }}>
     <button
       onClick={() => setIsEditing(true)}
-      style={{
-        backgroundColor: '#292E52',
-        color: '#fff',
-        padding: '6px 12px',
-        borderRadius: 6,
-        border: 'none',
-        fontSize: 14,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6
-      }}
+      style={buttonStyle}
     >
       <FiPlus size={14} />
       Edit
     </button>
     <button
       onClick={onDelete}
-      style={{
-        backgroundColor: '#292E52',
-        color: '#fff',
-        padding: '6px 12px',
-        borderRadius: 6,
-        border: 'none',
-        fontSize: 14,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6
-      }}
+      style={buttonStyle}
     >
       <FiTrash2 size={14} />
       Delete
