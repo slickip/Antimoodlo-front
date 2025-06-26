@@ -111,7 +111,11 @@ function Quiz({ quizConfig }) {
 }
 
   if (nowMoscow < startDate) {
-  return <>… Доступно с: { startDate.toLocaleString("ru-RU", { timeZone: "Europe/Moscow" }) } </>
+    return <>⏳ Квиз будет доступен с: {startDate.toLocaleString("ru-RU", { timeZone: "Europe/Moscow" })}</>;
+  }
+
+  if (user?.userrole === 1 && nowMoscow > endDate) {
+    return <>⛔ Квиз больше недоступен. Дедлайн прошёл: {endDate.toLocaleString("ru-RU", { timeZone: "Europe/Moscow" })}</>;
   }
   
 
