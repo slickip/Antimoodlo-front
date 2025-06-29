@@ -3,7 +3,7 @@ import { transformQuizData } from './Api';
 //we are testing the transformQuizData function exported from Api.js.
 describe('transformQuizData', () => {
   //test case 1
-  it('возвращает пустой массив вопросов, если входных нет', () => {
+  it('returns an empty array of questions if there are no input', () => {
     const input = { quizTitle: 'My Quiz', quizDescription: 'Desc' }; //test input
     const res = transformQuizData(input);
 
@@ -16,7 +16,7 @@ describe('transformQuizData', () => {
 
   //confirm that when input questions are provided, each question is transformed into the backend format with question, type, and options fields.
   //test case 2
-  it('мэпит поля text/type/options в нужный формат', () => {
+  it('maps the text/type/options fields to the desired format', () => {
     const quizData = { //test input
       quizTitle: 'Test',
       quizDescription: 'D',
