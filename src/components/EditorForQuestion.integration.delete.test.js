@@ -1,4 +1,6 @@
-// EditorForQuestion.integration.delete.test.js
+/*This test verifies that clicking the "Delete" button
+correctly calls the provided `onDelete` function.
+This ensures the delete button triggers the removal logic.*/
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import EditorForQuestion from "../components/EditorForQuestion";
@@ -12,8 +14,8 @@ const sampleQ = {
 };
 
 describe("Integration: EditorForQuestion delete", () => {
-  it("вызывает onDelete при клике Delete", () => {
-    const onDelete = jest.fn();
+  it("calls onDelete() when Delete button is clicked", () => {
+    const onDelete = jest.fn(); //mock function to track calls
     render(
       <EditorForQuestion
         question={sampleQ}
@@ -22,8 +24,10 @@ describe("Integration: EditorForQuestion delete", () => {
       />
     );
 
-    // Здесь исправили!
+    //click the Delete button (using role and accessible name)
     fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+
+    //verify that onDelete was called
     expect(onDelete).toHaveBeenCalled();
   });
 });

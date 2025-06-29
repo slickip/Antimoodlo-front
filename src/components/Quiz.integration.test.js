@@ -1,3 +1,8 @@
+/* This test verifies the entire flow of:
+ - selecting an answer
+ - clicking Submit
+ - seeing the score appear.
+ It ensures the quiz scoring logic works end-to-end. */
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import Quiz from "./Quiz";
@@ -5,16 +10,16 @@ import '@testing-library/jest-dom';
 import { MemoryRouter } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-// МОКАЕМ useAuth
+//mock useAuth to simulate a logged-in student
 jest.mock("../context/AuthContext", () => ({
   useAuth: jest.fn(),
 }));
 
-// Тест
+
 describe("Integration: Quiz", () => {
-  it("показывает результат после Submit", () => {
+  it("shows score after submitting", () => {
     useAuth.mockReturnValue({
-      user: { userrole: 2 } // студент
+      user: { userrole: 2 } 
     });
 
     const quizMock = {
@@ -35,10 +40,13 @@ describe("Integration: Quiz", () => {
         <Quiz quizConfig={quizMock}/>
       </MemoryRouter>
     );
-
+    //select the first option
     fireEvent.click(screen.getByLabelText(/A/i));
+
+    //submit answers
     fireEvent.click(screen.getByText(/submit/i));
 
+    //verify the score appears
     expect(screen.getByText(/Score/i)).toBeInTheDocument();
   });
 });

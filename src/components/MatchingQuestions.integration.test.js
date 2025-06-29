@@ -1,4 +1,6 @@
-// MatchingQuestion.integration.test.js
+/* This test verifies that the MatchingQuestion component
+renders all left and right items passed in props.
+It ensures users will see all options to match. */
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import MatchingQuestion from "../components/MatchingQuestions";
@@ -11,7 +13,7 @@ const questionMock = {
 };
 
 describe("Integration: MatchingQuestion", () => {
-  it("рендерит все варианты для сопоставления", () => {
+  it("renders all matching options", () => {
     render(
       <MatchingQuestion
         question={questionMock}
@@ -21,8 +23,10 @@ describe("Integration: MatchingQuestion", () => {
       />
     );
 
+    //assert left items are displayed
     expect(screen.getByText("L1")).toBeInTheDocument();
     expect(screen.getByText("L2")).toBeInTheDocument();
+    //assert right items are displayed
     expect(screen.getByText("R1")).toBeInTheDocument();
     expect(screen.getByText("R2")).toBeInTheDocument();
   });
