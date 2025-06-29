@@ -1,4 +1,5 @@
 import axios from 'axios';
+//const axios = require('axios'); //чтоб тесты работали
 
 const API_BASE_URL = '/api';
 const end   = new Date("2025-07-20T13:00:00+03:00");
@@ -387,3 +388,4 @@ export default {
   return api.get('/users'); 
   }
 };
+export { transformQuizData };

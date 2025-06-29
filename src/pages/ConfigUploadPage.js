@@ -806,7 +806,7 @@ await api.updateQuizMeta(quizId, {
         />
       </div>
 
-      <div className="editor-field"> {/*открытие квиза поле ввода*/}Add commentMore actions
+      <div className="editor-field"> {/*открытие квиза поле ввода*/}
         <label className="editor-label">Start Date & Time (МСК):</label>
         <input
           type="datetime-local"

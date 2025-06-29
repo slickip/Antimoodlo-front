@@ -343,3 +343,4 @@ return (
 }
 
 export default Quiz;
+export { parseMoscow };
