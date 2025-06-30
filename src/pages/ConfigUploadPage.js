@@ -95,7 +95,19 @@ function ConfigUploadPage() {
   const [quizTitle, setQuizTitle] = useState("");
   const [quizDescription, setQuizDescription] = useState("");
   const [questions, setQuestions] = useState([]);
-  const [yamlText, setYamlText] = useState("");
+  const [yamlText, setYamlText] = useState(() => {
+    return localStorage.getItem("autosaveYaml") || "";
+  });
+  useEffect(() => {
+  const timeout = setTimeout(() => {
+    if (yamlText.trim()) {
+      localStorage.setItem("autosaveYaml", yamlText);
+    }
+  }, 1000); // сохранить через 1 сек после изменений
+
+  return () => clearTimeout(timeout);
+}, [yamlText]);
+
   const [yamlHistory, setYamlHistory]   = useState([""]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [yamlError, setYamlError] = useState(null);
