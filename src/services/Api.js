@@ -385,7 +385,10 @@ export default {
   },
 
   getUsers() {
-  return api.get('/users'); 
+    return api.get('/users'); 
+  },
+  getGrades() {
+    return api.get('/grades');
   }
 };
 export { transformQuizData };

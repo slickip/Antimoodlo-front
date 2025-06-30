@@ -705,3 +705,19 @@
   margin-bottom: 12px;
   border-radius: 6px;
 }
+
+.results-quiz-btn {
+  padding: 12px 24px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.results-quiz-btn:hover {
+  background-color: #218838;
+}
