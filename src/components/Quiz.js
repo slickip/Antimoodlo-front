@@ -166,7 +166,7 @@ return (
             <strong>
               {i + 1}. {q.question}{" "}
               <span style={{ fontWeight: "normal", fontSize: 14 }}>
-                ({q.points || 1} балл{(q.points || 1) !== 1 ? "ов" : ""})
+                ({q.points || 1} point{(q.points || 1) !== 1 ? "s" : ""})
               </span>
             </strong>
 
@@ -195,7 +195,10 @@ return (
       if (q.type === "open") {
         return (
           <div key={q.id} style={{ marginBottom: 24 }}>
-            <strong>{i + 1}. {q.question}</strong>
+            <strong>{i + 1}. {q.question}{" "}
+              <span style={{ fontWeight: "normal", fontSize: 14 }}>
+                ({q.points || 1} point{(q.points || 1) !== 1 ? "s" : ""})
+              </span></strong>
             {q.imageurl && (
               <img
                 src={q.imageurl}
@@ -247,7 +250,10 @@ return (
       const isMultiple = q.type === "multiple";
       return (
         <div key={q.id} style={{ marginBottom: 16 }}>
-          <strong>{i + 1}. {q.question}</strong>
+          <strong>{i + 1}. {q.question}{" "}
+              <span style={{ fontWeight: "normal", fontSize: 14 }}>
+                ({q.points || 1} point{(q.points || 1) !== 1 ? "s" : ""})
+              </span></strong>
           {q.imageurl && (
             <img
               src={q.imageurl}
