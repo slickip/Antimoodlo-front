@@ -242,8 +242,8 @@
   }
   
   .question-container {
-    background-color: #f8f9fa;
-    padding: 20px;
+    background-color: #eeeeee;
+    padding: 32px;
     border-radius: 8px;
     margin-bottom: 25px;
   }
@@ -320,10 +320,8 @@
   }
   
   .questions-list {
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 25px;
+    background-color: transparent;
+    padding: 0;
   }
   
   .question-item {
@@ -720,4 +718,11 @@
 }
 .results-quiz-btn:hover {
   background-color: #218838;
+}
+.question-editor {
+  background-color: #eeeeee;
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 50px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }

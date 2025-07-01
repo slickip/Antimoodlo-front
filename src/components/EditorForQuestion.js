@@ -125,19 +125,19 @@ const addRight = () =>
     }));
   };
 
-if (isEditing) {
-  return (
-<div
-  style={{
-    backgroundColor: '#f9f9f9',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 12
-  }}
->
+  if (isEditing) {
+    return (
+      <div
+        style={{
+          backgroundColor: '#eeeeee',
+          padding: 16,
+          borderRadius: 8,
+          marginBottom: 12,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12
+        }}
+      >
   {/* Вопрос */}
   <div>
     <label style={{ fontWeight: 'bold' }}>Question:</label>
@@ -367,7 +367,7 @@ if (isEditing) {
 }
 return (
 <div style={{
-  backgroundColor: '#f9f9f9',
+  backgroundColor: '#eeeeee',
   padding: '12px 16px',
   marginBottom: 12,
   borderRadius: 8,
