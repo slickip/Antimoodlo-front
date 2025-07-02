@@ -59,8 +59,8 @@ function StudentPage() {
                 <p className="quiz-description">{q.description}</p>
 
                 {isStudent && expired ? (
-                  <p style={{ color: "red", fontWeight: "bold" }}>
-                    ⛔ Дедлайн прошёл: {end.toLocaleString("ru-RU", { timeZone: "Europe/Moscow" })}
+                  <p style={{ color: "rgba(1, 5, 40, 0.8)", fontWeight: "bold" }}>
+                    Дедлайн прошёл: {end.toLocaleString("ru-RU", { timeZone: "Europe/Moscow" })}
                   </p>
                 ) : (
                   
