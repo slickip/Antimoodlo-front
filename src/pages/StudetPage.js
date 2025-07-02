@@ -28,6 +28,7 @@ function StudentPage() {
     };
     load();
   }, []);
+  console.log("Квизы:", quizzes);
 
   return (
   <div className="quiz-creator-container">
@@ -62,6 +63,7 @@ function StudentPage() {
                     ⛔ Дедлайн прошёл: {end.toLocaleString("ru-RU", { timeZone: "Europe/Moscow" })}
                   </p>
                 ) : (
+                  
                   <button
                     className="action-btn start-quiz-btn"
                     onClick={() => navigate(`/student/quiz/${q.id}`)}

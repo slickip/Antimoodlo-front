@@ -387,8 +387,14 @@ export default {
   getUsers() {
     return api.get('/users'); 
   },
+
   getGrades() {
     return api.get('/grades');
+  },
+
+  addGrade(gradeData) {
+    return api.post('/grades', gradeData);
   }
+
 };
 export { transformQuizData };

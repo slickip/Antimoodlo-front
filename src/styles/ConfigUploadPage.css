@@ -719,6 +719,47 @@
 .results-quiz-btn:hover {
   background-color: #218838;
 }
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 16px;
+}
+
+.results-table th,
+.results-table td {
+  border: 1px solid #ccc;
+  padding: 12px 20px;
+  text-align: left;
+}
+
+.results-table th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+}
+
+.results-table tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.results-table tr:hover {
+  background-color: #f1f1f1;
+}
+
+.results-table td:first-child {
+  width: 150px; /* Ширина колонки User ID */
+}
+.results-table th {
+  background-color: #e0e0e0;
+}
+
+.results-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.results-table tr:hover {
+  background-color: #eaeaea;
+}
 .question-editor {
   background-color: #eeeeee;
   padding: 24px;

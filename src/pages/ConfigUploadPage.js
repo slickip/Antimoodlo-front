@@ -1366,14 +1366,14 @@ quiz:
           <table className="results-table">
             <thead>
               <tr>
-                <th>User ID</th>
+                <th>Name</th>
                 <th>Points</th>
               </tr>
             </thead>
             <tbody>
               {grades.map((g) => (
                 <tr key={g.id}>
-                  <td>{g.userid}</td>
+                  <td>{g.login}</td>
                   <td>{g.points}</td>
                 </tr>
               ))}
@@ -1427,9 +1427,25 @@ quiz:
                       setSelectedResultsQuiz(quiz);
                       setGradesLoading(true);
                       try {
-                        const res = await api.get("/grades");
-                        const filtered = res.data.filter((g) => g.quizid === quiz.id);
-                        setGrades(filtered);
+                        // 1) Загружаем оценки
+                        const resGrades = await api.getGrades();
+                        const filtered = resGrades.data.filter((g) => g.quizid === quiz.id);
+
+                        // 2) Загружаем пользователей
+                        const resUsers = await api.getUsers();
+                        const users = resUsers.data;
+
+                        // 3) Делаем карту userid -> login
+                        const userMap = new Map(users.map(u => [u.userid, u.userlogin]));
+
+                        // 4) В каждый grade добавляем поле login
+                        const gradesWithLogin = filtered.map(g => ({
+                          ...g,
+                          login: userMap.get(g.userid) || `User #${g.userid}`
+                        }));
+
+                        // 5) Сохраняем
+                        setGrades(gradesWithLogin);
                       } catch (err) {
                         console.error(err);
                         setGrades([]);
