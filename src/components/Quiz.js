@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/Api";
 import Timer from "./Timer";
@@ -16,6 +16,13 @@ function Quiz({ quizConfig }) {
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [loading, setLoading] = useState(!quizConfig);
 
+  const questionRefs = useRef([]); //массив референсев на вопросы для навигации
+
+  if (questionRefs.current.length !== (quizData?.quiz?.questions || quizData?.questions || []).length) {
+    questionRefs.current = Array((quizData?.quiz?.questions || quizData?.questions || []).length)
+      .fill()
+      .map((_, i) => questionRefs.current[i] || React.createRef());
+  }
   useEffect(() => {
     if (quizConfig) return; // Никаких запросов если передан quizConfig
 
@@ -134,7 +141,57 @@ function Quiz({ quizConfig }) {
     <div>
       <h2>{title}</h2>
       <p>{description}</p>
-
+      {/* Панель номеров вопросов */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "left",
+          marginBottom: 24,
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: 'rgb(30, 34, 77)',
+            borderRadius: '12px',
+            display: 'flex',
+            gap: '10px',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            padding: '0px 16px 16px 16px'
+          }}
+        >
+          {questions.map((_, i) => (
+            <button
+            key={i}
+            onClick={() =>
+              questionRefs.current[i]?.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+              })
+            }
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "12px",
+              backgroundColor: "white",
+              color: "#1e224d",
+              fontWeight: "bold",
+              fontSize: "16px",
+              border: "none",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
+              lineHeight: 1,
+              verticalAlign: "middle"
+            }}
+          >
+            <span style={{ display: "block", lineHeight: 1 }}>{i + 1}</span>
+          </button>
+          ))}
+        </div>
+      </div>
       {!result && !isTimeUp && (
         <Timer duration={duration} onTimeUp={() => setIsTimeUp(true)} />
       )}
@@ -146,7 +203,7 @@ function Quiz({ quizConfig }) {
       {questions.map((q, i) => {
       if (q.type === "matching") {
         return (
-          <div key={q.id} style={{ marginBottom: 24 }}>
+          <div key={q.id} ref={questionRefs.current[i]} style={{ marginBottom: 24 }}>
             {/* заголовок + картинка */}
             <strong>
               {i + 1}. {q.question}{" "}
@@ -179,7 +236,7 @@ function Quiz({ quizConfig }) {
 
       if (q.type === "open") {
         return (
-          <div key={q.id} style={{ marginBottom: 24 }}>
+          <div key={q.id} ref={questionRefs.current[i]} style={{ marginBottom: 24 }}>
             <strong>{i + 1}. {q.question}{" "}
               <span style={{ fontWeight: "normal", fontSize: 14 }}>
                 ({q.points || 1} point{(q.points || 1) !== 1 ? "s" : ""})
@@ -234,7 +291,7 @@ function Quiz({ quizConfig }) {
 
       const isMultiple = q.type === "multiple";
       return (
-        <div key={q.id} style={{ marginBottom: 16 }}>
+        <div key={q.id} ref={questionRefs.current[i]} style={{ marginBottom: 16 }}>
           <strong>{i + 1}. {q.question}{" "}
               <span style={{ fontWeight: "normal", fontSize: 14 }}>
                 ({q.points || 1} point{(q.points || 1) !== 1 ? "s" : ""})
