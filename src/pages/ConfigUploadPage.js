@@ -147,7 +147,16 @@ const toggleExpand = id => {
       try {
         setIsLoading(true);
         const response = await api.getQuizzes();
-        setSavedQuizzes(response.data);
+        const allQuizzes = response.data;
+
+        if (user.userrole === 3) {
+          // админ видит все квизы
+          setSavedQuizzes(allQuizzes);
+        } else if (user.userrole === 2) {
+          // преподаватель видит только свои
+          const myQuizzes = allQuizzes.filter(q => q.userid === user.userid);
+          setSavedQuizzes(myQuizzes);
+        }
       } catch (err) {
         console.error("Failed to load quizzes:", err);
         const saved = localStorage.getItem('savedQuizzes');
@@ -639,15 +648,21 @@ await api.updateQuizMeta(quizId, {
   let newQuestion;
 
   if (currentQuestion.type === "matching") {
-  newQuestion = {
-    ...base,
-    imageurl: currentQuestion.imageurl || undefined,
-    left_items:  currentQuestion.left_items.slice(),
-    right_items: currentQuestion.right_items.slice(),
-    correct_matches: currentQuestion.correct_matches,
-    points: currentQuestion.points 
-  };
-}
+    const allOptions = [
+      ...currentQuestion.left_items.filter(Boolean),
+      ...currentQuestion.right_items.filter(Boolean)
+    ];
+    newQuestion = {
+      ...base,
+      imageurl: currentQuestion.imageurl || undefined,
+      left_items: currentQuestion.left_items.slice(),
+      right_items: currentQuestion.right_items.slice(),
+      correct_matches: currentQuestion.correct_matches,
+      options: allOptions,  // 👈 добавляем options для совместимости
+      points: currentQuestion.points
+    };
+  }
+
  else if (currentQuestion.type === "single") {
     newQuestion = {
       ...base,

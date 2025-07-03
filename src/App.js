@@ -6,6 +6,7 @@ import StudentPage from "./pages/StudetPage";
 import QuizPage    from "./pages/QuizPage"; // добавь это
 import { AuthProvider } from "./context/AuthContext";
 import PrivateRoute from "./components/PrivateRoute";
+import StudentResultsPage from "./pages/StudentResultsPage";
 
 function App() {
   return (
@@ -43,7 +44,14 @@ function App() {
           }
         />
 
-        
+        <Route
+          path="/student/results"
+          element={
+            <PrivateRoute>
+              <StudentResultsPage />
+            </PrivateRoute>}
+        />
+                
       </Routes>
     </AuthProvider>
   );

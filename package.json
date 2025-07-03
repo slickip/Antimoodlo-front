@@ -16,7 +16,8 @@
     "react-dom": "^19.1.0",
     "react-icons": "^5.5.0",
     "react-router-dom": "^6.30.1",
-    "react-scripts": "5.0.1",
+    "react-script": "^2.0.5",
+    "react-scripts": "^5.0.1",
     "styled-components": "^6.1.19",
     "web-vitals": "^2.1.4",
     "yaml": "^2.8.0"
@@ -70,6 +71,8 @@
     "moduleNameMapper": {
       "^axios$": "axios/dist/node/axios.cjs"
     },
-    "setupFilesAfterEnv": ["<rootDir>/src/setupTests.js"]
+    "setupFilesAfterEnv": [
+      "<rootDir>/src/setupTests.js"
+    ]
   }
 }

@@ -15,6 +15,7 @@ function Quiz({ quizConfig }) {
   const [result, setResult] = useState(null);
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [loading, setLoading] = useState(!quizConfig);
+  const [alreadyPassed, setAlreadyPassed] = useState(false);
 
   const questionRefs = useRef([]); //массив референсев на вопросы для навигации
 
@@ -45,10 +46,38 @@ function Quiz({ quizConfig }) {
     };
 
     loadQuiz();
+
+    const checkGrade = async () => {
+      if (!user?.userid || !urlQuizId) return;
+
+      try {
+        const res = await api.getGrades();
+        const existing = res.data.find(
+          g => g.userid === user.userid && g.quizid === Number(urlQuizId)
+        );
+        if (existing) setAlreadyPassed(true);
+      } catch (e) {
+        console.error("Ошибка при проверке пройденных квизов", e);
+      }
+    };
+
+    checkGrade();
   }, [urlQuizId, quizConfig]);
 
   if (loading) return <p>Загрузка квиза...</p>;
   if (!quizData) return <p>Ошибка: квиз не найден.</p>;
+
+  if (alreadyPassed) {
+    return (
+      <div>
+        <h2>{quizData?.title || "Квиз"}</h2>
+        <p>Вы уже проходили этот квиз ✅</p>
+        <button onClick={() => navigate("/student")} className="action-btn">
+          Вернуться на главную
+        </button>
+      </div>
+    );
+  }
 
   const { title, description, questions, duration, start, end } =
     quizData.quiz || quizData;
