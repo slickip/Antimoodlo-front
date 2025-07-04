@@ -1,10 +1,16 @@
 // components/Sidebar.js
 import React from "react";
-import { FiLogOut, FiUpload, FiEye } from "react-icons/fi";
+import { FiLogOut, FiUpload, FiEye, FiBarChart2 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 function Sidebar({ width = 60, setWidth, onNavigate }) {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const navigate = useNavigate();
+
+  const isStudent = user?.userrole === 1;      // 1 = student
+  const open  = () => setWidth?.(200);
+  const close = () => setWidth?.(60);
 
   const sidebarStyle = {
     height: "100vh",
@@ -26,23 +32,44 @@ function Sidebar({ width = 60, setWidth, onNavigate }) {
   const sectionStyle = { padding: "20px 10px" };
 
   /* ————————— helpers ————————— */
-  const open  = () => setWidth?.(200);
-  const close = () => setWidth?.(60);
 
   return (
     <div style={sidebarStyle} onMouseEnter={open} onMouseLeave={close}>
       {/* верхний блок */}
       <div style={sectionStyle}>
-        <SidebarItem
-          icon={<FiUpload />}
-          label="Upload"
-          onClick={() => onNavigate?.("upload")}
-        />
-        <SidebarItem
-          icon={<FiEye />}
-          label="Quizzes"
-          onClick={() => onNavigate?.("saved")}
-        />
+        {isStudent ? (
+          /* ===== Студент ===== */
+          <>
+            {/* Grades */}
+            <SidebarItem
+              icon={<FiBarChart2 />}
+              label="Grades"
+              onClick={() => navigate("/student/results")}
+            />
+            {/* Quizzes */}
+            <SidebarItem
+              icon={<FiEye />}
+              label="Quizzes"
+              onClick={() => navigate("/student")}
+            />
+          </>
+        ) : (
+          /* ===== Учитель / Админ ===== */
+          <>
+            {/* Upload */}
+            <SidebarItem
+              icon={<FiUpload />}
+              label="Upload"
+              onClick={() => onNavigate?.("upload")}
+            />
+            {/* Quizzes */}
+            <SidebarItem
+              icon={<FiEye />}
+              label="Quizzes"
+              onClick={() => onNavigate?.("saved")}
+            />
+          </>
+        )}
       </div>
 
       {/* выход */}
